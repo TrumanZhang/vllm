@@ -40,7 +40,7 @@ class EngineArgs:
     distributed_executor_backend: Optional[str] = None
     pipeline_parallel_size: int = 1
     tensor_parallel_size: int = 1
-    sequence_parallel_size: int = 1
+    sequence_parallel_size: int = 0
     enable_long_sequence: bool = False
     max_parallel_loading_workers: Optional[int] = None
     block_size: int = 16
