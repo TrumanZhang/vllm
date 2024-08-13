@@ -1010,6 +1010,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 seq_data={group_id: seq_data},
                 sampling_params=sampling_params,
                 block_tables=None,
+                block_tables_remote_rank=None,
                 lora_request=dummy_lora_requests_per_seq[group_id]
                 if dummy_lora_requests_per_seq else None,
                 multi_modal_data=dummy_multi_modal_data,
@@ -1164,8 +1165,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                         block_tables=block_tables,
                         paged_kv_indptr=paged_kv_indptr_tensor_host,
                         paged_kv_indices=paged_kv_indices_tensor_host,
-                        paged_kv_last_page_len=
-                        paged_kv_last_page_len_tensor_host,
+                        paged_kv_last_page_len=paged_kv_last_page_len_tensor_host,
                         num_qo_heads=num_qo_heads,
                         num_kv_heads=num_kv_heads,
                         head_dim=self.model_config.get_head_size(),
