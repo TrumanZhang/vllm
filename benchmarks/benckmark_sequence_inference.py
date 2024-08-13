@@ -298,7 +298,7 @@ if __name__ == "__main__":
                         help='pipeline-parallel-size')
     parser.add_argument('--sequence-parallel-size',
                         type=int,
-                        default=1,
+                        default=0,
                         help='sequence-parallel-size')
     parser.add_argument('--max-model-len',
                         type=int,
