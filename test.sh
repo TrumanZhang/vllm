@@ -1,15 +1,15 @@
 #!/bin/bash
-outputlen=(1500 1500 1500 2000 1500 2000 1500 1000 1500)
+outputlen=(32 1500 1500 2000 1500 2000 1500 1000 1500)
 numseqs=(1024 1024 512 128 512 128 512 512 512)
 numprompts=(4000 2000 4000 4000 2000 2000 4000 4000 2000)
 parallelsize=(2 2 4 4 4 4 8 8 8)
-for i in {0..3}
+for i in {0..0}
 do
-        for j in {0..1}
+        for j in {1..1}
         do
-                for k in {0..3}
+                for k in {2..2}
                 do
-                        for l in {0..4}
+                        for l in {0..0}
                         do
                                 echo "****************************************"
                                 python benchmarks/benckmark_sequence_inference.py \

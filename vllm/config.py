@@ -649,7 +649,7 @@ class ParallelConfig:
         pp_size = pipeline_parallel_size
         tp_size = tensor_parallel_size
         sp_size = sequence_parallel_size
-        self.world_size = pp_size * tp_size + sp_size - 1
+        self.world_size = pp_size * tp_size + sp_size
         if worker_use_ray:
             if self.distributed_executor_backend is None:
                 self.distributed_executor_backend = "ray"

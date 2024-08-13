@@ -899,7 +899,7 @@ def init_distributed_environment(
 def initialize_model_parallel(
     tensor_model_parallel_size: int = 1,
     pipeline_model_parallel_size: int = 1,
-    sequence_parallel_size: int = 1,
+    sequence_parallel_size: int = 0,
     backend: Optional[str] = None,
 ) -> None:
     """
@@ -935,7 +935,7 @@ def initialize_model_parallel(
     # Get world size and rank. Ensure some consistencies.
     assert torch.distributed.is_initialized()
     world_size: int = torch.distributed.get_world_size()
-    tp_pp_world_size: int = world_size - sequence_parallel_size + 1
+    tp_pp_world_size: int = world_size - sequence_parallel_size
     sp_world_size: int = sequence_parallel_size
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
@@ -992,7 +992,7 @@ def initialize_model_parallel(
 def ensure_model_parallel_initialized(
     tensor_model_parallel_size: int,
     pipeline_model_parallel_size: int,
-    sequence_parallel_size: int = 1,
+    sequence_parallel_size: int = 0,
     backend: Optional[str] = None,
 ) -> None:
     """Helper to initialize model parallel groups if they are not initialized,
