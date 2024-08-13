@@ -149,8 +149,8 @@ class LlamaAttention(nn.Module):
                               num_kv_heads=self.num_kv_heads,
                               cache_config=cache_config,
                               quant_config=quant_config)
-        self.broastcaster = SequenceParallelLinearForBroastcast()
-        self.parallel_gather = SequenceParallelLinearForGather()
+        self.broastcaster = SequenceParallelLinearForBroastcast(-1)
+        self.parallel_gather = SequenceParallelLinearForGather(-1)
 
     def forward(
         self,
