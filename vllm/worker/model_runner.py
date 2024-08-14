@@ -429,9 +429,10 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 seq_data = seq_group_metadata.seq_data[seq_id]
                 remote_len = 0
                 blk_ranks = seq_group_metadata.block_tables_remote_rank[seq_id]
-                for rank in blk_ranks:
-                    if rank > 0:
-                        remote_len += self.block_size
+                if blk_ranks is not None:
+                    for rank in blk_ranks:
+                        if rank > 0:
+                            remote_len += self.block_size
 
                 if is_prompt:
                     context_len = seq_data.get_num_computed_tokens()
