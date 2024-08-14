@@ -365,7 +365,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         num_decode_tokens_long = 0
         old_index = 0
 
-        sequence_parallel_size = self.parallel_config.sequece_parallel_size
+        sequence_parallel_size = self.parallel_config.sequence_parallel_size
         # superblock_size：
         # self.cache_config.block_migrate_size/self.cache_config.block_size
         # to be modified
