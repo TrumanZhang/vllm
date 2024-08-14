@@ -137,7 +137,7 @@ class FlashAttentionMetadata(AttentionMetadata):
     # the same q3. In this way, the max length of sequence is not limited to the
     # Max_number*gpu_number, where multi sequence blocks in one remote rank are
     # considered as the multi batched sequences with the same q.
-    q_remote_distirbution: List[torch.Tensor]
+    q_remote_distribution: List[torch.Tensor]
 
     # (batch_size, max_blocks_per_seq).
     # Block addresses per sequence. (Seq id -> list of physical block)

@@ -129,7 +129,7 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
     # the same q3. In this way, the max length of sequence is not limited to the
     # Max_number*gpu_number, where multi sequence blocks in one remote rank are
     # considered as the multi batched sequences with the same q.
-    q_remote_distirbution: List[List[int]]
+    q_remote_distribution: List[List[int]]
 
     # Whether or not if cuda graph is enabled.
     # Cuda-graph is currently enabled for decoding only.
