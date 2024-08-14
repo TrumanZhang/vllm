@@ -790,6 +790,7 @@ class EngineArgs:
             enable_chunked_prefill=self.enable_chunked_prefill,
             embedding_mode=model_config.embedding_mode,
             preemption_mode=self.preemption_mode,
+            enable_long_sequence=self.enable_long_sequence,
         )
         lora_config = LoRAConfig(
             max_lora_rank=self.max_lora_rank,

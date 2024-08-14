@@ -472,7 +472,8 @@ class Scheduler:
                     decode_seq_groups.append(
                         ScheduledSequenceGroup(seq_group=seq_group,
                                                token_chunk_size=1))
-                    self.add_kvcache_migrate_group(seq_group)
+                    if self.scheduler_config.enable_long_sequence:
+                        self.add_kvcache_migrate_group(seq_group)
                 budget.add_num_batched_tokens(seq_group.request_id,
                                               num_running_tokens)
                 # OPTIMIZATION:  Note that get_max_num_running_seqs is
@@ -819,12 +820,14 @@ class Scheduler:
                      len(running_scheduled.swapped_out))
         blocks_to_migrate: List[Tuple[int, int, int]] = []
         blocks_to_copy_for_migration: List[Tuple[int, int]] = []
-        self.block_manager.get_kvcache_migrate_block(blocks_to_migrate)
-        self.block_manager.format_kvcache_migrate_blocks(
-            blocks_to_migrate, blocks_to_copy_for_migration)
-        superblock_size = len(blocks_to_migrate)
-        superblock_to_migrate = (blocks_to_migrate[0][2] % superblock_size,
-                                 blocks_to_migrate[0][1])
+        if self.scheduler_config.enable_long_sequence:
+            self.block_manager.get_kvcache_migrate_block(blocks_to_migrate)
+            self.block_manager.format_kvcache_migrate_blocks(
+                blocks_to_migrate, blocks_to_copy_for_migration)
+            superblock_size = len(blocks_to_migrate)
+            superblock_to_migrate = (blocks_to_migrate[0][2] %
+                                     superblock_size,
+                                     blocks_to_migrate[0][1])
         # There should be no prefill from running queue because this policy
         # doesn't allow chunked prefills.
         assert len(running_scheduled.prefill_seq_groups) == 0
@@ -1143,7 +1146,8 @@ class Scheduler:
         for seq in seqs:
             seq.status = SequenceStatus.WAITING
             self.free_seq(seq)
-            self.block_manager.remove_kvcache_migrate_block(seq.seq_id)
+            if self.scheduler_config.enable_long_sequence:
+                self.block_manager.remove_kvcache_migrate_block(seq.seq_id)
             seq.reset_state_for_recompute()
 
     def _preempt_by_swap(
@@ -1162,7 +1166,8 @@ class Scheduler:
         blocks_to_swap_in.extend(mapping)
         for seq in seq_group.get_seqs(status=SequenceStatus.SWAPPED):
             seq.status = SequenceStatus.RUNNING
-            self.block_manager.add_kvcache_migrate(seq)
+            if self.scheduler_config.enable_long_sequence:
+                self.block_manager.add_kvcache_migrate(seq)
 
     def _swap_out(
         self,
@@ -1179,7 +1184,8 @@ class Scheduler:
         blocks_to_swap_out.extend(mapping)
         for seq in seq_group.get_seqs(status=SequenceStatus.RUNNING):
             seq.status = SequenceStatus.SWAPPED
-            self.block_manager.remove_kvcache_migrate_block(seq.seq_id)
+            if self.scheduler_config.enable_long_sequence:
+                self.block_manager.remove_kvcache_migrate_block(seq.seq_id)
 
     def _passed_delay(self, now: float) -> bool:
         if self.prev_prompt:
