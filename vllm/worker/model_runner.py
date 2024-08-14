@@ -369,8 +369,9 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         # superblock_size：
         # self.cache_config.block_migrate_size/self.cache_config.block_size
         # to be modified
-        max_sequence_length = self.model_config.max_model_len
-        max_block_size = max_sequence_length / self.cache_config.block_size
+        max_sequence_length = 8192
+        max_block_size = int(max_sequence_length /
+                             self.cache_config.block_size)
         seq_lens_remote: List[List[int]] = []
         block_tables_remote: List[List[List[int]]] = []
         q_remote_distribution: List[List[int]] = []
