@@ -164,7 +164,7 @@ class LlamaAttention(nn.Module):
         q, k = self.rotary_emb(positions, q, k)
         num_long_decode_tokens = attn_metadata.num_long_decode_tokens
         if not num_long_decode_tokens:
-            q[-num_long_decode_tokens:] = self.broastcaster(
+            q[-num_long_decode_tokens:] = self.broastcaster.forward(
                 q[-num_long_decode_tokens:])
         attn_output, out_exp_sum, out_max_sums = self.attn(
             q, k, v, kv_cache, attn_metadata)
@@ -172,7 +172,7 @@ class LlamaAttention(nn.Module):
         # shape[num_seqs, num_heads, max_num_partitions, head_size]
         if not num_long_decode_tokens:
             num = num_long_decode_tokens
-            attn, exp_sum, max_logits = self.parallel_gather(
+            attn, exp_sum, max_logits = self.parallel_gather.forward(
                 attn_output[-num:], out_exp_sum, out_max_sums)
 
             # reduce sequence block result

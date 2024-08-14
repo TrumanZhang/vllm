@@ -64,7 +64,7 @@ class broastcastlayer:
             device="cuda")
         for i in range(self.tp_size):
             with torch.cuda.stream(self.broastcast_streams[i]):
-                output[i] = self.broatcasters[i]()
+                output[i] = self.broatcasters[i].forward()
         return output
 
 
@@ -85,7 +85,7 @@ class gatherlayer:
             with torch.cuda.stream(self.gather_streams[i]):
                 start = i * self.num_heads
                 end = (i + 1) * self.num_heads
-                self.gather[i](attn_to_reduce[start:end],
+                self.gather[i].forward(attn_to_reduce[start:end],
                                exp_sum_to_reduce[start:end],
                                max_logits_to_reduce[start:end])
 
