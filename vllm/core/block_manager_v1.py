@@ -224,9 +224,7 @@ class UncachedBlockAllocator(BlockAllocatorBase):
             "Invalid codepath for uncached block allocator.")
 
     def get_migrate_blocks(self) -> List[int]:
-        raise NotImplementedError(
-            "Invalid codepath for uncached block allocator.")
-
+        pass
 
 class SelectionPolicy(enum.Enum):
     """Enum for eviction policy used by make_evictor to instantiate the correct
@@ -287,7 +285,7 @@ class RemoteAllocator:
         used_rank = self.get_used_rank(block_number)
         allocator = self.allocator_group[used_rank - 1]
         blocks = []
-        for i in range(0, block_number):
+        for i in range(block_number):
             block = allocator.allocate()
             blocks.append(block)
         return blocks
