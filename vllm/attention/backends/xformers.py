@@ -183,7 +183,7 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
             num_remote_decode_tokens=[],
             max_remote_decode_seq_len=[],
             block_tables_remote=[],
-            q_remote_distirbution=[],
+            q_remote_distribution=[],
             use_cuda_graph=False,
         )
         return self._cached_prefill_metadata
@@ -220,7 +220,7 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
             num_remote_decode_tokens=[],
             max_remote_decode_seq_len=[],
             block_tables_remote=[],
-            q_remote_distirbution=[],
+            q_remote_distribution=[],
             use_cuda_graph=self.use_cuda_graph,
         )
         return self._cached_decode_metadata
@@ -255,7 +255,7 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
             num_remote_decode_tokens=self.num_remote_decode_tokens,
             max_remote_decode_seq_len=self.max_remote_decode_seq_len,
             block_tables_remote=self.block_tables_remote,
-            q_remote_distirbution=self.q_remote_distirbution,
+            q_remote_distribution=self.q_remote_distribution,
             use_cuda_graph=self.use_cuda_graph,
         )
         return self._cached_remote_metadata
@@ -345,7 +345,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
             tp_size = query.size(0)
             num_old = query.size(1)
             if remote_metadata := attn_metadata.remote_metadata:
-                q_dist = remote_metadata.q_remote_distirbution[sp_rank]
+                q_dist = remote_metadata.q_remote_distribution[sp_rank]
                 query_remote = reshape_q(query, q_dist)
                 output = torch.empty_like(query_remote)
                 query = query_remote.view(tp_size, -1, self.num_heads,
@@ -376,7 +376,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                     remote_metadata.block_tables_remote[sp_rank],
                     remote_metadata.seq_lens_remote_tensor[sp_rank],
                     remote_metadata.max_remote_decode_seq_len[sp_rank],
-                    remote_metadata.q_remote_distirbution[sp_rank][:],
+                    remote_metadata.q_remote_distribution[sp_rank][:],
                     self.kv_cache_dtype,
                     self.num_kv_heads,
                     self.scale,

@@ -193,7 +193,7 @@ class FlashAttentionMetadata(AttentionMetadata):
             num_remote_decode_tokens=[],
             max_remote_decode_seq_len=[],
             block_tables_remote=[],
-            q_remote_distirbution=[],
+            q_remote_distribution=[],
             use_cuda_graph=False,
         )
         return self._cached_prefill_metadata
@@ -230,7 +230,7 @@ class FlashAttentionMetadata(AttentionMetadata):
             num_remote_decode_tokens=[],
             max_remote_decode_seq_len=[],
             block_tables_remote=[],
-            q_remote_distirbution=[],
+            q_remote_distribution=[],
             use_cuda_graph=self.use_cuda_graph,
         )
         return self._cached_decode_metadata
@@ -245,7 +245,7 @@ class FlashAttentionMetadata(AttentionMetadata):
         assert self.seq_lens_remote is not None
         assert self.seq_lens_remote_tensor is not None
         assert self.block_tables_remote is not None
-        assert self.q_remote_distirbution is not None
+        assert self.q_remote_distribution is not None
 
         self._cached_remote_metadata = FlashAttentionMetadata(
             num_prefills=0,
@@ -269,7 +269,7 @@ class FlashAttentionMetadata(AttentionMetadata):
             num_remote_decode_tokens=self.num_remote_decode_tokens,
             max_remote_decode_seq_len=self.max_remote_decode_seq_len,
             block_tables_remote=self.block_tables_remote,
-            q_remote_distirbution=self.q_remote_distirbution,
+            q_remote_distribution=self.q_remote_distribution,
             use_cuda_graph=self.use_cuda_graph,
         )
         return self._cached_remote_metadata
@@ -369,7 +369,7 @@ class FlashAttentionImpl(AttentionImpl):
         else:
             remote_metadata = None
         if remote_metadata is not None and sp_rank is not None:
-            q_dist = remote_metadata.q_remote_distirbution[sp_rank]
+            q_dist = remote_metadata.q_remote_distribution[sp_rank]
             query_remote = reshape_q(query, q_dist)
             output = torch.empty_like(query_remote)
             query = query_remote.view(-1, self.num_heads, self.head_size)
