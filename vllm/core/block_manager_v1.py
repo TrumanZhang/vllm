@@ -404,7 +404,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                                 self.num_remote_blocks,
                                                 self.remote_allocator_number,
                                                 SelectionPolicy.ONLYAPPEND)
-        self.migrate_list: List[SequenceSuperBlock]
+        self.migrate_list: List[SequenceSuperBlock]=[]
         # Mapping: seq_id -> BlockTable.
         self.block_tables: Dict[int, BlockTable] = {}
         # Mapping: req_id -> BlockTable
