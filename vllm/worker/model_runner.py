@@ -382,6 +382,10 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             q_remote_distribution.append([])
             num_remote_decode_tokens.append(0)
             max_remote_decode_seq_len.append(0)
+        if sequence_parallel_size == 0:
+            seq_lens_remote.append([])
+            block_tables_remote.append([])
+            q_remote_distribution.append([])
         padding_mapping = []
         padding_mapping.extend([_PAD_BLOCK_NUMBER] * max_block_size)
 
