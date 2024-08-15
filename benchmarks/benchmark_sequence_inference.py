@@ -54,11 +54,11 @@ def sample_requests(
             # Prune too long sequences.
             continue
         filtered_dataset.append((prompt, prompt_len, output_len))
-        dataset_distributed=[0,0,0,0,0,0,0,0,0,0]
-        for item in filtered_dataset:
-            index=int(item[1]/128)
-            dataset_distributed[index]+=1
-        print(dataset_distributed)
+    dataset_distributed = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    for item in filtered_dataset:
+        index = int(item[1]/128)
+        dataset_distributed[index] += 1
+    print(dataset_distributed)
     return filtered_dataset
 
 
