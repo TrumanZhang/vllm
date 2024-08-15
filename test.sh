@@ -12,7 +12,7 @@ do
                         for l in {0..0}
                         do
                                 echo "****************************************"
-                                python benchmarks/benckmark_sequence_inference.py \
+                                python benchmarks/benchmark_sequence_inference.py \
                                 --model /home/work05/Work/models/llm/Llama-2-7b-chat-hf \
                                 --dataset /home/work02/work02.new/llm/benchmarks/vllmfile-main/data/ShareGPT_V3_unfiltered_cleaned_split.json \
                                 --max-num-seqs ${numseqs[$k]} --output-len ${outputlen[$l]} --num-prompts ${numprompts[$j]} \
