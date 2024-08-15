@@ -445,7 +445,7 @@ class Scheduler:
                 logger.warning("kv cache memory is not enough, with only %d "
                                "free blocks while %s sequence_group need blovks"
                                " with %d sequences.",
-                               free_blocks,seq_group.request_id, 
+                               free_blocks, seq_group.request_id,
                                num_running_seqs)
 
                 if running_queue:
@@ -1122,7 +1122,8 @@ class Scheduler:
                 seqs = seq_group.get_seqs(SequenceStatus.RUNNING)
                 logger.warning("preempt sequence %d, prompt len %d, sequence "
                                "len %d, need blocks %d", seqs[0].seq_id,
-                               seqs[0].get_prompt_len, seqs[0].n_blocks)
+                               seqs[0].get_prompt_len, seqs[0].get_len,
+                               seqs[0].n_blocks)
             else:
                 preemption_mode = PreemptionMode.SWAP
         elif self.user_specified_preemption_mode == "swap":
