@@ -1137,8 +1137,7 @@ class Scheduler:
                 "not enough KV cache space. This can affect the end-to-end "
                 "performance. Increase gpu_memory_utilization or "
                 "tensor_parallel_size to provide more KV cache memory. "
-                "total_num_cumulative_preemption=%d. In addition,"
-                "prompt len %d",
+                "total_num_cumulative_preemption=%d. In addition,",
                 seq_group.request_id, preemption_mode,
                 self.num_cumulative_preemption + 1)
         self.num_cumulative_preemption += 1
