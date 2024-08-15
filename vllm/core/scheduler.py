@@ -445,7 +445,7 @@ class Scheduler:
                                "free blocks while %d sequence_group need blovks"
                                " with %d sequences.",
                                self.block_manager.get_num_free_gpu_blocks(),
-                               seq_group.request_id,num_running_seqs)
+                               seq_group.request_id, num_running_seqs)
 
                 if running_queue:
                     # Preempt the lowest-priority sequence groups.
