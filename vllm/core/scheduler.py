@@ -1122,7 +1122,7 @@ class Scheduler:
                 seqs = seq_group.get_seqs(SequenceStatus.RUNNING)
                 logger.warning("preempt sequence %d, prompt len %d, sequence "
                                "len %d, need blocks %d", seqs[0].seq_id,
-                               seqs[0].get_prompt_len, seqs[0].get_len,
+                               seqs[0].get_prompt_len(), seqs[0].get_len(),
                                seqs[0].n_blocks)
             else:
                 preemption_mode = PreemptionMode.SWAP
