@@ -226,6 +226,7 @@ class UncachedBlockAllocator(BlockAllocatorBase):
     def get_migrate_blocks(self) -> List[int]:
         pass
 
+
 class SelectionPolicy(enum.Enum):
     """Enum for eviction policy used by make_evictor to instantiate the correct
        Evictor subclass.
@@ -381,7 +382,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         if block_migrate_size is not None:
             self.block_migrate_size = block_migrate_size
         else:
-            self.block_migrate_size = 0
+            self.block_migrate_size = 1024
         if block_migrate_threshold is not None:
             self.block_migrate_threshold = block_migrate_threshold
         else:
@@ -389,7 +390,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         if block_migrate_start is not None:
             self.block_migrate_start = block_migrate_start
         else:
-            self.block_migrate_start = 4096
+            self.block_migrate_start = 6144
         if num_remote_blocks is not None:
             self.num_remote_blocks = num_remote_blocks
         else:
@@ -402,7 +403,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                                 self.num_remote_blocks,
                                                 self.remote_allocator_number,
                                                 SelectionPolicy.ONLYAPPEND)
-        self.migrate_list: List[SequenceSuperBlock]=[]
+        self.migrate_list: List[SequenceSuperBlock] = []
         # Mapping: seq_id -> BlockTable.
         self.block_tables: Dict[int, BlockTable] = {}
         # Mapping: req_id -> BlockTable
