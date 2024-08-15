@@ -441,6 +441,11 @@ class Scheduler:
                 if (curr_loras is not None and seq_group.lora_int_id > 0
                         and seq_group.lora_int_id in curr_loras):
                     curr_loras.remove(seq_group.lora_int_id)
+                logger.warning("kv cache memory is not enough, with only %d "
+                               "free blocks while %d sequence_group need blovks"
+                               " with %d sequences.",
+                               self.block_manager.get_num_free_gpu_blocks(),
+                               seq_group.request_id,num_running_seqs)
 
                 if running_queue:
                     # Preempt the lowest-priority sequence groups.
@@ -1113,9 +1118,12 @@ class Scheduler:
         if self.user_specified_preemption_mode is None:
             if seq_group.get_max_num_running_seqs() == 1:
                 preemption_mode = PreemptionMode.RECOMPUTE
+                seqs = seq_group.get_seqs(SequenceStatus.RUNNING)
+                logger.warning("preempt sequence %d, prompt len %d, sequence "
+                               "len %d, need blocks %d", seqs[0].seq_id,
+                               seqs[0].get_prompt_len, seqs[0].n_blocks)
             else:
                 preemption_mode = PreemptionMode.SWAP
-
         elif self.user_specified_preemption_mode == "swap":
             preemption_mode = PreemptionMode.SWAP
         else:
@@ -1127,8 +1135,10 @@ class Scheduler:
                 "not enough KV cache space. This can affect the end-to-end "
                 "performance. Increase gpu_memory_utilization or "
                 "tensor_parallel_size to provide more KV cache memory. "
-                "total_num_cumulative_preemption=%d", seq_group.request_id,
-                preemption_mode, self.num_cumulative_preemption + 1)
+                "total_num_cumulative_preemption=%d. In addition,"
+                "prompt len %d",
+                seq_group.request_id, preemption_mode,
+                self.num_cumulative_preemption + 1)
         self.num_cumulative_preemption += 1
 
         if preemption_mode == PreemptionMode.RECOMPUTE:
