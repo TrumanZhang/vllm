@@ -390,15 +390,15 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                 tmp = output.view(tp_size, -1, self.num_heads * self.head_size)
                 return filter_tensor(tmp, exp_sums, max_log, q_dist, num_old,
                                      tp_size)
-        
+
         query = query.view(-1, self.num_heads, self.head_size)
         key = key.view(-1, self.num_kv_heads, self.head_size)
         value = value.view(-1, self.num_kv_heads, self.head_size)
         output = torch.empty_like(query)
-        
+
         if kv_cache is not None:
             key_cache, value_cache = PagedAttention.split_kv_cache(
-                kv_cache, self.num_kv_heads, self.head_size)
+                kv_cache, self.num_kv_heads, self.head_size, False)
 
             # Reshape the input keys and values and store them in the cache.
             # If kv_cache is not provided, the new key and value tensors are
