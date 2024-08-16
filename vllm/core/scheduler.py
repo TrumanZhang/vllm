@@ -1142,13 +1142,16 @@ class Scheduler:
                 seq_group.request_id, preemption_mode,
                 self.num_cumulative_preemption + 1)
         self.num_cumulative_preemption += 1
-
+        num_free_blocks = self.block_manager.get_num_free_gpu_blocks()
         if preemption_mode == PreemptionMode.RECOMPUTE:
             self._preempt_by_recompute(seq_group)
         elif preemption_mode == PreemptionMode.SWAP:
             self._preempt_by_swap(seq_group, blocks_to_swap_out)
         else:
             raise AssertionError("Invalid preemption mode.")
+        num_new_free_blocks = self.block_manager.get_num_free_gpu_blocks()
+        logger("preemption reuslt:old free blocks:%d,new free blocks:%d",
+               num_free_blocks, num_new_free_blocks)
         return preemption_mode
 
     def _preempt_by_recompute(
@@ -1194,7 +1197,7 @@ class Scheduler:
         blocks_to_swap_out.extend(mapping)
         for seq in seq_group.get_seqs(status=SequenceStatus.RUNNING):
             seq.status = SequenceStatus.SWAPPED
-            
+
     def _passed_delay(self, now: float) -> bool:
         if self.prev_prompt:
             self.last_prompt_latency = now - self.prev_time
