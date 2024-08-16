@@ -1150,7 +1150,7 @@ class Scheduler:
         else:
             raise AssertionError("Invalid preemption mode.")
         num_new_free_blocks = self.block_manager.get_num_free_gpu_blocks()
-        logger("request-id:%s,preemption reuslt:old free blocks:%d,new "
+        logger.warning("request-id:%s,preemption reuslt:old free blocks:%d,new "
                "free blocks:%d", seq_group.request_id,
                num_free_blocks, num_new_free_blocks)
         return preemption_mode
