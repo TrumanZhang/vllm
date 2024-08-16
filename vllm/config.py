@@ -400,7 +400,7 @@ class CacheConfig:
         cache_dtype: str,
         num_gpu_blocks_override: Optional[int] = None,
         sliding_window: Optional[int] = None,
-        enable_prefix_caching: bool = False,
+        enable_prefix_caching: bool = True,
         block_migrate_size: int = 1024,
         block_migrate_threshold: int = 6144,
         block_migrate_start: int = 4096,

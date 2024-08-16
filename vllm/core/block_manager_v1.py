@@ -390,11 +390,11 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                                 SelectionPolicy.ONLYAPPEND)
         migrate_size = int(self.block_migrate_size/self.block_size)
         self.blocks_for_migrate = migrate_size
-        
+
         if self.enable_caching:
             logger.info("Automatic prefix caching is enabled.")
             self.gpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
-                Device.GPU, block_size, num_gpu_blocks,self.blocks_for_migrate)
+                Device.GPU, block_size, num_gpu_blocks, self.blocks_for_migrate)
             self.cpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
                 Device.CPU, block_size, num_cpu_blocks)
         else:
@@ -403,7 +403,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             self.cpu_allocator = UncachedBlockAllocator(
                 Device.CPU, block_size, num_cpu_blocks)
         # used for kv cache migrate
-        num_gpu_blocks=num_gpu_blocks-migrate_size
+        num_gpu_blocks = num_gpu_blocks-migrate_size
         self.watermark_blocks = int(watermark * num_gpu_blocks)
 
         self.migrate_list: List[SequenceSuperBlock] = []
@@ -413,6 +413,10 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         # Note that each SequenceGroup has a unique
         # request ID
         self.cross_block_tables: Dict[str, BlockTable] = {}
+        logger.warning("num_gpu_blocks:%d, num_cpu_blocks:%d, num_remote_blocks:"
+                       "%d,num_blocks_for_migrate:%d", self.num_total_gpu_blocks,
+                       self.num_total_cpu_blocks, self.num_remote_blocks,
+                       self.blocks_for_migrate)
 
     def _get_seq_num_required_blocks(self, seq: Sequence) -> int:
         return 0 if seq is None else seq.n_blocks
