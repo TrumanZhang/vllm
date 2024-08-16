@@ -340,6 +340,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         watermark: float = 0.01,
         sliding_window: Optional[int] = None,
         enable_caching: bool = False,
+        enable_long_sequence: bool = False,
         remote_allocator_number: Optional[int] = 0,
         block_migrate_size: Optional[int] = 0,
         block_migrate_threshold: Optional[int] = 8192,
@@ -389,7 +390,11 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                                 self.remote_allocator_number,
                                                 SelectionPolicy.ONLYAPPEND)
         migrate_size = int(self.block_migrate_size/self.block_size)
-        self.blocks_for_migrate = migrate_size
+        self.enable_long_sequence = enable_long_sequence
+        if enable_long_sequence:
+            self.blocks_for_migrate = migrate_size
+        else:
+            self.blocks_for_migrate = 0
 
         if self.enable_caching:
             logger.info("Automatic prefix caching is enabled.")
