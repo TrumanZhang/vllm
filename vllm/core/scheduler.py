@@ -443,11 +443,11 @@ class Scheduler:
                         and seq_group.lora_int_id in curr_loras):
                     curr_loras.remove(seq_group.lora_int_id)
                 free_blocks = self.block_manager.get_num_free_gpu_blocks()
-                logger.warning("kv cache memory is not enough, with only %d "
-                               "free blocks while %s sequence_group need blovks"
-                               " with %d sequences.",
-                               free_blocks, seq_group.request_id,
-                               num_running_seqs)
+                # logger.warning("kv cache memory is not enough, with only %d "
+                #                "free blocks while %s sequence_group need blovks"
+                #                " with %d sequences.",
+                #                free_blocks, seq_group.request_id,
+                #                num_running_seqs)
 
                 if running_queue:
                     # Preempt the lowest-priority sequence groups.
@@ -1150,9 +1150,10 @@ class Scheduler:
         else:
             raise AssertionError("Invalid preemption mode.")
         num_new_free_blocks = self.block_manager.get_num_free_gpu_blocks()
-        logger.warning("request-id:%s,preemption reuslt:old free blocks:%d,new "
-               "free blocks:%d", seq_group.request_id,
-               num_free_blocks, num_new_free_blocks)
+        num_blocks = seq_group.get_seqs()[0].n_blocks
+        logger.warning("request-id:%s,blocks_number,preemption reuslt:old free "
+                       "blocks:%d,new free blocks:%d", seq_group.request_id,
+                       num_blocks, num_free_blocks, num_new_free_blocks,)
         return preemption_mode
 
     def _preempt_by_recompute(
