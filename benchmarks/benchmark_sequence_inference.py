@@ -50,15 +50,22 @@ def sample_requests(
         if prompt_len < 4 or output_len < 4:
             # Prune too short sequences.
             continue
-        if prompt_len > 1024 or prompt_len + output_len > 2048:
+        if prompt_len > 4096 or prompt_len + output_len > 8192:
             # Prune too long sequences.
             continue
         filtered_dataset.append((prompt, prompt_len, output_len))
-    dataset_distributed = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    dataset_distributed = [0 for i in range(17)]
+    len_distributed=[0 for i in range(17)]
+
     for item in filtered_dataset:
-        index = int(item[1]/128)
+        index = int(item[1]/512)
         dataset_distributed[index] += 1
+        index2=int((item[1]+item[2])/512)
+        len_distributed[index2]+=1
+    print("requests information:prompt_len and total_len distribution.")
     print(dataset_distributed)
+    print(len_distributed)
+    print("**********************************************************")
     return filtered_dataset
 
 
