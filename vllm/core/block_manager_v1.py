@@ -418,10 +418,13 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         # Note that each SequenceGroup has a unique
         # request ID
         self.cross_block_tables: Dict[str, BlockTable] = {}
-        logger.warning("num_gpu_blocks:%d, num_cpu_blocks:%d, num_remote_blocks:"
-                       "%d,num_blocks_for_migrate:%d", self.num_total_gpu_blocks,
-                       self.num_total_cpu_blocks, self.num_remote_blocks,
-                       self.blocks_for_migrate)
+        logger.warning("num_gpu_blocks:%d, num_cpu_blocks:%d, "
+                       "num_remote_blocks:%d, num_blocks_for_"
+                       "migrate:%d, free gpu block:%d",
+                       self.num_total_gpu_blocks,
+                       self.num_total_cpu_blocks,
+                       self.num_remote_blocks, self.blocks_for_migrate,
+                       self.gpu_allocator.get_num_free_blocks())
 
     def _get_seq_num_required_blocks(self, seq: Sequence) -> int:
         return 0 if seq is None else seq.n_blocks
