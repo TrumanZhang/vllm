@@ -409,6 +409,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                 Device.CPU, block_size, num_cpu_blocks)
         # used for kv cache migrate
         num_gpu_blocks = num_gpu_blocks-migrate_size
+        self.num_total_gpu_blocks = num_gpu_blocks
         self.watermark_blocks = int(watermark * num_gpu_blocks)
 
         self.migrate_list: List[SequenceSuperBlock] = []
