@@ -50,7 +50,7 @@ def sample_requests(
         if prompt_len < 4 or output_len < 4:
             # Prune too short sequences.
             continue
-        if prompt_len > 4096 or prompt_len + output_len > 8192:
+        if prompt_len > 2048 or prompt_len + output_len > 4096:
             # Prune too long sequences.
             continue
         filtered_dataset.append((prompt, prompt_len, output_len))
