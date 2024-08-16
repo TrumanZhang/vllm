@@ -50,7 +50,8 @@ class DistributedGPUExecutor(GPUExecutor):
 
         if len(num_remote_blocks) != 0:
             num_remote_gpu_blocks = min(b[0] for b in num_remote_blocks)
-        num_remote_gpu_blocks = num_gpu_blocks
+        else:
+            num_remote_gpu_blocks = 0
         return num_gpu_blocks, num_cpu_blocks, num_remote_gpu_blocks
 
     def initialize_cache(self,

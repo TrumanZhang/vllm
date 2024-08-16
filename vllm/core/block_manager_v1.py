@@ -241,12 +241,12 @@ class RemoteAllocator:
     def __init__(
         self,
         block_size: int,
-        num_gpu_blocks: int,
+        num_remote_blocks: int,
         remote_allocator: int,
         selection_policy: SelectionPolicy = SelectionPolicy.ONLYAPPEND,
     ) -> None:
         self.block_size = block_size
-        self.num_gpu_blocks = num_gpu_blocks
+        self.num_gpu_blocks = num_remote_blocks
         self.remote_allocator = remote_allocator
         self.selection_policy = selection_policy
         self.last_used_rank = 1
@@ -364,25 +364,10 @@ class BlockSpaceManagerV1(BlockSpaceManager):
 
         self.enable_caching = enable_caching
 
-        self.watermark_blocks = int(watermark * num_gpu_blocks)
-
-        if self.enable_caching:
-            logger.info("Automatic prefix caching is enabled.")
-            self.gpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
-                Device.GPU, block_size, num_gpu_blocks)
-            self.cpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
-                Device.CPU, block_size, num_cpu_blocks)
-        else:
-            self.gpu_allocator = UncachedBlockAllocator(
-                Device.GPU, block_size, num_gpu_blocks)
-            self.cpu_allocator = UncachedBlockAllocator(
-                Device.CPU, block_size, num_cpu_blocks)
-        # used for kv cache migrate
-
         if block_migrate_size is not None:
             self.block_migrate_size = block_migrate_size
         else:
-            self.block_migrate_size = 1024
+            self.block_migrate_size = 256
         if block_migrate_threshold is not None:
             self.block_migrate_threshold = block_migrate_threshold
         else:
@@ -403,6 +388,24 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                                 self.num_remote_blocks,
                                                 self.remote_allocator_number,
                                                 SelectionPolicy.ONLYAPPEND)
+        migrate_size = int(self.block_migrate_size/self.block_size)
+        self.blocks_for_migrate = migrate_size
+        
+        if self.enable_caching:
+            logger.info("Automatic prefix caching is enabled.")
+            self.gpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
+                Device.GPU, block_size, num_gpu_blocks,self.blocks_for_migrate)
+            self.cpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
+                Device.CPU, block_size, num_cpu_blocks)
+        else:
+            self.gpu_allocator = UncachedBlockAllocator(
+                Device.GPU, block_size, num_gpu_blocks)
+            self.cpu_allocator = UncachedBlockAllocator(
+                Device.CPU, block_size, num_cpu_blocks)
+        # used for kv cache migrate
+        num_gpu_blocks=num_gpu_blocks-migrate_size
+        self.watermark_blocks = int(watermark * num_gpu_blocks)
+
         self.migrate_list: List[SequenceSuperBlock] = []
         # Mapping: seq_id -> BlockTable.
         self.block_tables: Dict[int, BlockTable] = {}
