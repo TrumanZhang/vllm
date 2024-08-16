@@ -1121,10 +1121,10 @@ class Scheduler:
             if seq_group.get_max_num_running_seqs() == 1:
                 preemption_mode = PreemptionMode.RECOMPUTE
                 seqs = seq_group.get_seqs(SequenceStatus.RUNNING)
-                logger.warning("preempt sequence %d, prompt len %d, sequence "
-                               "len %d, need blocks %d", seqs[0].seq_id,
-                               seqs[0].get_prompt_len(), seqs[0].get_len(),
-                               seqs[0].n_blocks)
+                # logger.warning("preempt sequence %d, prompt len %d, sequence "
+                #                "len %d, need blocks %d", seqs[0].seq_id,
+                #                seqs[0].get_prompt_len(), seqs[0].get_len(),
+                #                seqs[0].n_blocks)
             else:
                 preemption_mode = PreemptionMode.SWAP
         elif self.user_specified_preemption_mode == "swap":
@@ -1150,7 +1150,8 @@ class Scheduler:
         else:
             raise AssertionError("Invalid preemption mode.")
         num_new_free_blocks = self.block_manager.get_num_free_gpu_blocks()
-        logger("preemption reuslt:old free blocks:%d,new free blocks:%d",
+        logger("request-id:%s,preemption reuslt:old free blocks:%d,new "
+               "free blocks:%d", seq_group.request_id,
                num_free_blocks, num_new_free_blocks)
         return preemption_mode
 
