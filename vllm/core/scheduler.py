@@ -1160,8 +1160,6 @@ class Scheduler:
         for seq in seqs:
             seq.status = SequenceStatus.WAITING
             self.free_seq(seq)
-            if self.scheduler_config.enable_long_sequence:
-                self.block_manager.remove_kvcache_migrate_block(seq.seq_id)
             seq.reset_state_for_recompute()
 
     def _preempt_by_swap(
@@ -1180,8 +1178,6 @@ class Scheduler:
         blocks_to_swap_in.extend(mapping)
         for seq in seq_group.get_seqs(status=SequenceStatus.SWAPPED):
             seq.status = SequenceStatus.RUNNING
-            if self.scheduler_config.enable_long_sequence:
-                self.block_manager.add_kvcache_migrate(seq)
 
     def _swap_out(
         self,
@@ -1198,9 +1194,7 @@ class Scheduler:
         blocks_to_swap_out.extend(mapping)
         for seq in seq_group.get_seqs(status=SequenceStatus.RUNNING):
             seq.status = SequenceStatus.SWAPPED
-            if self.scheduler_config.enable_long_sequence:
-                self.block_manager.remove_kvcache_migrate_block(seq.seq_id)
-
+            
     def _passed_delay(self, now: float) -> bool:
         if self.prev_prompt:
             self.last_prompt_latency = now - self.prev_time

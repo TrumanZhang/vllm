@@ -724,6 +724,8 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                        self.cpu_allocator,
                                        self.gpu_allocator,
                                        mapping)
+            if self.enable_long_sequence:
+                self.add_kvcache_migrate_block(seq)
 
         if seq_group.is_encoder_decoder():
             self.cross_block_tables[request_id] = \
@@ -751,6 +753,8 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                        self.gpu_allocator,
                                        self.cpu_allocator,
                                        mapping)
+            if self.enable_long_sequence:
+                self.remove_kvcache_migrate_block(seq_group.seq_id)
 
         if seq_group.is_encoder_decoder():
             self.cross_block_tables[request_id] = \
@@ -785,8 +789,9 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             return
         block_table = self.block_tables[seq.seq_id]
         self._free_block_table(block_table)
-        self.remove_kvcache_migrate_block(seq.seq_id)
         del self.block_tables[seq.seq_id]
+        if self.enable_long_sequence:
+            self.remove_kvcache_migrate_block(seq.seq_id)
 
     def free_cross(self, seq_group: SequenceGroup) -> None:
         if seq_group.request_id not in self.cross_block_tables:
@@ -805,6 +810,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         for block_table in self.cross_block_tables.values():
             self._free_block_table(block_table)
         self.cross_block_tables.clear()
+        self.migrate_list.clear()
 
     def get_block_table(self, seq: Sequence) -> List[int]:
         block_table = self.block_tables[seq.seq_id]
@@ -812,8 +818,6 @@ class BlockSpaceManagerV1(BlockSpaceManager):
 
     def get_block_table_remote_rank(self, seq: Sequence) -> List[int]:
         block_table = self.block_tables[seq.seq_id]
-        if len(block_table) == 0:
-            return []
         return [block.remote_rank for block in block_table]
 
     def get_cross_block_table(self, seq_group: SequenceGroup) -> List[int]:
@@ -885,10 +889,10 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         remain = (len - self.block_migrate_start) % self.block_migrate_size
         is_running = seq.status == SequenceStatus.RUNNING
         maybe_to_migrate = len >= self.block_migrate_threshold
+        migrate_set = set(self.migrate_list)
         if maybe_to_migrate and remain == 0 and is_running:
             block_table = self.block_tables[seq.seq_id]
             start = self.block_migrate_start
-            migrate_set = set(self.migrate_list)
             while start < len:
                 block = block_table[start]
                 if block.remote_rank == 0:
@@ -897,7 +901,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                            start)
                     ])
                 start = start + self.block_migrate_size
-            self.migrate_list = List(migrate_set)
+        self.migrate_list = List(migrate_set)
 
     def get_kvcache_migrate_block(self, mapping: List[Tuple[int, int,
                                                             int]]) -> None:
