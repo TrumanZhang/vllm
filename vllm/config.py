@@ -1394,7 +1394,7 @@ def _get_and_verify_max_len(
             # If max_model_len is specified, we use it.
             return max_model_len
 
-        default_max_len = 2048
+        default_max_len = 4096
         logger.warning(
             "The model's config.json does not contain any of the following "
             "keys to determine the original maximum length of the model: "
@@ -1423,7 +1423,9 @@ def _get_and_verify_max_len(
 
     # If the user specified a max length, make sure it is smaller than the
     # derived length from the HF model config.
-    enable_long_sequence = True
+    if enable_long_sequence is None:
+        enable_long_sequence=False
+    
     if max_model_len is None:
         max_model_len = int(derived_max_model_len)
     elif not enable_long_sequence and max_model_len > derived_max_model_len:
