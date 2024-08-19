@@ -17,10 +17,16 @@ def sample_requests(
     num_requests: int,
     tokenizer: PreTrainedTokenizerBase,
     fixed_output_len: Optional[int],
+    max_model_len: Optional[int],
+    max_num_batched_tokens: Optional[int]
 ) -> List[Tuple[str, int, int]]:
     if fixed_output_len is not None and fixed_output_len < 4:
         raise ValueError("output_len too small")
 
+    if max_model_len is None:
+        max_model_len=4096
+    if max_num_batched_tokens is None:
+        max_num_batched_tokens=1024
     # Load the dataset.
     with open(dataset_path) as f:
         dataset = json.load(f)
@@ -50,18 +56,18 @@ def sample_requests(
         if prompt_len < 4 or output_len < 4:
             # Prune too short sequences.
             continue
-        if prompt_len > 2048 or prompt_len + output_len > 4096:
+        if prompt_len > max_num_batched_tokens or prompt_len + output_len > max_model_len:
             # Prune too long sequences.
             continue
         filtered_dataset.append((prompt, prompt_len, output_len))
     dataset_distributed = [0 for i in range(17)]
-    len_distributed=[0 for i in range(17)]
+    len_distributed = [0 for i in range(17)]
 
     for item in filtered_dataset:
         index = int(item[1]/512)
         dataset_distributed[index] += 1
-        index2=int((item[1]+item[2])/512)
-        len_distributed[index2]+=1
+        index2 = int((item[1]+item[2])/512)
+        len_distributed[index2] += 1
     print("requests information:prompt_len and total_len distribution.")
     print(dataset_distributed)
     print(len_distributed)
@@ -191,7 +197,8 @@ def main(args: argparse.Namespace):
     tokenizer = get_tokenizer(args.tokenizer,
                               trust_remote_code=args.trust_remote_code)
     requests = sample_requests(args.dataset, args.num_prompts, tokenizer,
-                               args.output_len)
+                               args.output_len, args.max_model_len,
+                               args.max_num_batched_tokens)
 
     if args.backend == "vllm":
         elapsed_time = run_vllm(
