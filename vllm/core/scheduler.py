@@ -988,14 +988,17 @@ class Scheduler:
         # Schedule sequence groups.
         # This function call changes the internal states of the scheduler
         # such as self.running, self.swapped, and self.waiting.
+        old_free_blocks = self.block_manager.get_num_free_gpu_blocks()
         scheduler_outputs = self._schedule()
+        new_free_blocks = self.block_manager.get_num_free_gpu_blocks()
         now = time.time()
         logger.warning("schedule() result:%d group,%d prefill,%d batched tokens,"
-                       "%d preemption",
+                       "%d preemption,free_blk_old:%d,free_blk_new:%d",
                        scheduler_outputs.running_queue_size,
                        scheduler_outputs.num_prefill_groups,
                        scheduler_outputs.num_batched_tokens,
-                       self.num_cumulative_preemption)
+                       self.num_cumulative_preemption,
+                       old_free_blocks, new_free_blocks)
 
         # Create input data structures.
         seq_group_metadata_list: List[SequenceGroupMetadata] = []
@@ -1162,9 +1165,9 @@ class Scheduler:
             raise AssertionError("Invalid preemption mode.")
         num_new_free_blocks = self.block_manager.get_num_free_gpu_blocks()
         num_blocks = seq_group.get_seqs()[0].n_blocks
-        logger.warning("request-id:%s,blk_n:%d,F_blk_old:%d,F_blk_new:%d",
-                       seq_group.request_id, num_blocks, num_free_blocks,
-                       num_new_free_blocks)
+        # logger.warning("request-id:%s,blk_n:%d,F_blk_old:%d,F_blk_new:%d",
+        #                seq_group.request_id, num_blocks, num_free_blocks,
+        #                num_new_free_blocks)
         return preemption_mode
 
     def _preempt_by_recompute(
