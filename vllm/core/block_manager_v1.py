@@ -659,7 +659,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                 continue
             for block in self.block_tables[seq.seq_id]:
                 if block.remote_rank == 0:
-                    blocks.update(block)
+                    blocks.update([block])
         # Cross-attention blocks
         if seq_group.is_encoder_decoder():
             blocks.update(self.cross_block_tables[request_id])
