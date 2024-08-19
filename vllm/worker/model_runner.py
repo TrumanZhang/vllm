@@ -1408,7 +1408,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                                                  dtype=hidden_states.dtype,
                                                  device=hidden_states.device)
         indexes = model_input.output_reshape_index
-        if indexes is not None:
+        if indexes is not None and self.model_config.enable_long_sequence:
             for i in range(len(indexes)):
                 hidden_states_reshape[indexes[i]] = hidden_states[i]
         else:
