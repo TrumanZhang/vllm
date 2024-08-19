@@ -452,6 +452,10 @@ class Scheduler:
                 if running_queue:
                     # Preempt the lowest-priority sequence groups.
                     victim_seq_group = running_queue.pop()
+                    num_running_seqs = victim_seq_group.get_max_num_running_seqs()
+                    budget.subtract_num_seqs(victim_seq_group.request_id,
+                                             num_running_seqs)
+
                     preempted_mode = self._preempt(victim_seq_group,
                                                    blocks_to_swap_out)
                     if preempted_mode == PreemptionMode.RECOMPUTE:
@@ -986,6 +990,12 @@ class Scheduler:
         # such as self.running, self.swapped, and self.waiting.
         scheduler_outputs = self._schedule()
         now = time.time()
+        logger.warning("schedule() result:%d group,%d prefill,%d batched tokens,"
+                       "%d preemption",
+                       scheduler_outputs.running_queue_size,
+                       scheduler_outputs.num_prefill_groups,
+                       scheduler_outputs.num_batched_tokens,
+                       self.num_cumulative_preemption)
 
         # Create input data structures.
         seq_group_metadata_list: List[SequenceGroupMetadata] = []
@@ -1133,15 +1143,15 @@ class Scheduler:
         else:
             preemption_mode = PreemptionMode.RECOMPUTE
 
-        if self.num_cumulative_preemption % 50 == 0:
-            logger.warning(
-                "Sequence group %s is preempted by %s mode because there is "
-                "not enough KV cache space. This can affect the end-to-end "
-                "performance. Increase gpu_memory_utilization or "
-                "tensor_parallel_size to provide more KV cache memory. "
-                "total_num_cumulative_preemption=%d. In addition,",
-                seq_group.request_id, preemption_mode,
-                self.num_cumulative_preemption + 1)
+        # if self.num_cumulative_preemption % 50 == 0:
+        #     logger.warning(
+        #         "Sequence group %s is preempted by %s mode because there is "
+        #         "not enough KV cache space. This can affect the end-to-end "
+        #         "performance. Increase gpu_memory_utilization or "
+        #         "tensor_parallel_size to provide more KV cache memory. "
+        #         "total_num_cumulative_preemption=%d. In addition,",
+        #         seq_group.request_id, preemption_mode,
+        #         self.num_cumulative_preemption + 1)
         self.num_cumulative_preemption += 1
         num_free_blocks = self.block_manager.get_num_free_gpu_blocks()
         if preemption_mode == PreemptionMode.RECOMPUTE:
@@ -1152,9 +1162,9 @@ class Scheduler:
             raise AssertionError("Invalid preemption mode.")
         num_new_free_blocks = self.block_manager.get_num_free_gpu_blocks()
         num_blocks = seq_group.get_seqs()[0].n_blocks
-        logger.warning("request-id:%s,blocks_number:%d,preemption reuslt:old free"
-                       " sblocks:%d,new free blocks:%d", seq_group.request_id,
-                       num_blocks, num_free_blocks, num_new_free_blocks)
+        logger.warning("request-id:%s,blk_n:%d,F_blk_old:%d,F_blk_new:%d",
+                       seq_group.request_id, num_blocks, num_free_blocks,
+                       num_new_free_blocks)
         return preemption_mode
 
     def _preempt_by_recompute(
