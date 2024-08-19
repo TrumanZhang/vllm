@@ -786,7 +786,7 @@ class SchedulerConfig:
         self._verify_args()
 
     def _verify_args(self) -> None:
-        enable_long_sequence=False
+        enable_long_sequence = False
         if (self.max_num_batched_tokens < self.max_model_len
                 and not self.chunked_prefill_enabled
                 and enable_long_sequence):
@@ -1423,9 +1423,9 @@ def _get_and_verify_max_len(
 
     # If the user specified a max length, make sure it is smaller than the
     # derived length from the HF model config.
-    if enable_long_sequence is None:
-        enable_long_sequence=False
-    
+
+    enable_long_sequence = False
+
     if max_model_len is None:
         max_model_len = int(derived_max_model_len)
     elif not enable_long_sequence and max_model_len > derived_max_model_len:
