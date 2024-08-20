@@ -185,10 +185,17 @@ class RayGPUExecutor(DistributedGPUExecutor):
             # see https://github.com/vllm-project/vllm/issues/5590
             gpu_ids = [int(x) for x in gpu_ids]
             node_gpus[node_id].extend(gpu_ids)
+        gpus = ""
         for node_id, gpu_ids in node_gpus.items():
             node_gpus[node_id] = sorted(gpu_ids)
+            node_gpu_str = ",".join(map(str, node_gpus[node_id]))
+            gpus = gpus + "@" + str(node_id) + "#" + node_gpu_str
 
         VLLM_INSTANCE_ID = get_vllm_instance_id()
+
+        number = len(worker_node_and_gpu_ids)
+        logger.warning("vllm_instance_id:%s,the number of pair<worker,gpu_id>"
+                       ":%d,gpus:%s", VLLM_INSTANCE_ID, number, gpus)
 
         # Set environment variables for the driver and workers.
         all_args_to_update_environment_variables = [({
