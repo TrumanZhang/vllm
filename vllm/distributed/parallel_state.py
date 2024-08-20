@@ -984,8 +984,10 @@ def initialize_model_parallel(
     for i in range(num_sequence_parallel_groups):
         ranks = [i] + list(
             range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
-        local_rank = get_world_group().local_rank
-        _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
+        if get_world_group().rank in ranks:
+            local_rank = get_world_group().local_rank
+            logger.info("rank:%d,index:%d",local_rank,i)
+            _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
 
 
 def ensure_model_parallel_initialized(
@@ -1020,13 +1022,13 @@ def ensure_model_parallel_initialized(
 
 def model_parallel_is_initialized():
     """Check if tensor and pipeline parallel groups are initialized."""
-    sp_is_initialized = True
+    sp_is_initialized=True
     if _SP is None:
-        sp_is_initialized = False
+        sp_is_initialized=False
     else:
         for item in _SP:
             if item is None:
-                sp_is_initialized = False
+                sp_is_initialized=False
                 break
     return (_TP is not None and _PP is not None and sp_is_initialized)
 
