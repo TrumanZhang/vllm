@@ -1021,7 +1021,15 @@ def ensure_model_parallel_initialized(
 
 def model_parallel_is_initialized():
     """Check if tensor and pipeline parallel groups are initialized."""
-    return (_TP is not None and _PP is not None)
+    sp_is_initialized=True
+    if _SP is None:
+        sp_is_initialized=False
+    else:
+        for item in _SP:
+            if item is None:
+                sp_is_initialized=False
+                break
+    return (_TP is not None and _PP is not None and sp_is_initialized)
 
 
 _TP_STATE_PATCHED = False
