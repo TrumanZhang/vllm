@@ -937,6 +937,7 @@ def initialize_model_parallel(
     world_size: int = torch.distributed.get_world_size()
     tp_pp_world_size: int = world_size - sequence_parallel_size
     sp_world_size: int = sequence_parallel_size
+    need_tp_pp_init = get_world_group().rank < tp_pp_world_size
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
 
@@ -950,6 +951,7 @@ def initialize_model_parallel(
     # Build the tensor model-parallel groups.
     num_tensor_model_parallel_groups: int = (tp_pp_world_size //
                                              tensor_model_parallel_size)
+
     global _TP
     assert _TP is None, ("tensor model parallel group is already initialized")
     group_ranks = []
@@ -958,7 +960,8 @@ def initialize_model_parallel(
             range(i * tensor_model_parallel_size,
                   (i + 1) * tensor_model_parallel_size))
         group_ranks.append(ranks)
-    _TP = init_model_parallel_group(group_ranks,
+    if need_tp_pp_init:
+        _TP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
 
     # Build the pipeline model-parallel groups.
@@ -972,7 +975,8 @@ def initialize_model_parallel(
         ranks = list(
             range(i, tp_pp_world_size, num_pipeline_model_parallel_groups))
         group_ranks.append(ranks)
-    _PP = init_model_parallel_group(group_ranks,
+    if need_tp_pp_init:
+        _PP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
 
     # Build the sequence-parallel groups.
@@ -988,7 +992,7 @@ def initialize_model_parallel(
         logger.info("enter_init")
         if get_world_group().rank in ranks:
             local_rank = get_world_group().local_rank
-            logger.info("rank:%d,index:%d",local_rank,i)
+            logger.info("rank:%d,index:%d", local_rank, i)
             _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
 
 
@@ -1024,13 +1028,13 @@ def ensure_model_parallel_initialized(
 
 def model_parallel_is_initialized():
     """Check if tensor and pipeline parallel groups are initialized."""
-    sp_is_initialized=True
+    sp_is_initialized = True
     if _SP is None:
-        sp_is_initialized=False
+        sp_is_initialized = False
     else:
         for item in _SP:
             if item is None:
-                sp_is_initialized=False
+                sp_is_initialized = False
                 break
     return (_TP is not None and _PP is not None and sp_is_initialized)
 
