@@ -108,8 +108,8 @@ class EngineArgs:
     otlp_traces_endpoint: Optional[str] = None
 
     block_migrate_size: int = 1024
-    block_migrate_threshold: int = 8192
-    block_migrate_start: int = 6144
+    block_migrate_threshold: int = 2048
+    block_migrate_start: int = 1024
 
     def __post_init__(self):
         if self.tokenizer is None:

@@ -24,9 +24,9 @@ def sample_requests(
         raise ValueError("output_len too small")
 
     if max_model_len is None:
-        max_model_len=4096
+        max_model_len = 4096
     if max_num_batched_tokens is None:
-        max_num_batched_tokens=1024
+        max_num_batched_tokens = 1024
     # Load the dataset.
     with open(dataset_path) as f:
         dataset = json.load(f)
@@ -124,7 +124,52 @@ def run_vllm(
             ))
 
     start = time.perf_counter()
-    llm.generate(prompts, sampling_params, use_tqdm=True)
+    results = llm.generate(prompts, sampling_params, use_tqdm=True)
+    request_number = len(results)
+    sequence_number = []
+    prompt_len = []
+    prompt_size = []
+    sequence_len = []
+    sequence_size = []
+    sequence_long_len = []
+
+    for request_output in results:
+        outputs = request_output.outputs
+
+        num_sequence = len(outputs)
+        sequence_number.append(num_sequence)
+
+        prompt = outputs.prompt
+        size_prompt = len(prompt)
+        prompt_size.append(size_prompt)
+
+        len_prompt = len(prompt.split(' '))
+        prompt_len.append(len_prompt)
+
+        length = []
+        size = []
+        for sequence_output in outputs:
+            text = sequence_output.text
+            size_sequence = len(sequence_output.text)
+            size.append(size_sequence)
+
+            text_list = text.split(' ')
+            length.append(prompt_len+len(text_list))
+        sequence_len.append(length)
+        sequence_size.append(size)
+        len_long_sequence = [len for len in length if len > 4096]
+        sequence_long_len.extend(len_long_sequence)
+    print(request_number)
+    print(sequence_number)
+    print("********************")
+    print(prompt_size)
+    print(sequence_size)
+    print("********************")
+    print(prompt_len)
+    print(sequence_len)
+    print("********************")
+    print(sequence_long_len)
+    print("********************")
     end = time.perf_counter()
     return end - start
 
