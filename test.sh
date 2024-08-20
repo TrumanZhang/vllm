@@ -17,10 +17,10 @@ do
                                 --dataset /home/work02/work02.new/llm/benchmarks/vllmfile-main/data/ShareGPT_V3_unfiltered_cleaned_split.json \
                                 --max-num-seqs ${numseqs[$k]} --output-len ${outputlen[$l]} --num-prompts ${numprompts[$j]} \
                                 --tensor-parallel-size ${parallelsize[$i]} --sequence-parallel-size 1 \
-                                --result /home/work02/work02.new/llm/vllm_sp/vllm/result.csv \
+                                --result /home/work02/work02.new/llm/vllm_sp/data/result.csv --enable-long-sequence True\
                                 --max-model-len 8192 --max-num-batched-tokens 1024
                                 echo "parallel size:${parallelsize[$i]},num prompts:${numprompts[$j]},num batched seqs:${numseqs[$k]},\
-                                max output length:${outputlen[$l]}"
+                                max output length:${outputlen[$l]}, sequence-parallel-size:1, max-model-len:8192, max-num-batched-tokens:1024"
                         done
                 done
         done
