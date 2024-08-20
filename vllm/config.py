@@ -663,7 +663,7 @@ class ParallelConfig:
             # current node and we aren't in a ray placement group.
 
             from vllm.executor import ray_utils
-            backend = "mp"
+            backend = "ray"
             ray_found = ray_utils.ray is not None
             if cuda_device_count_stateless() < self.world_size:
                 if not ray_found:
