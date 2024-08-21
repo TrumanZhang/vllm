@@ -343,11 +343,13 @@ class Worker(LocalOrDistributedWorkerBase):
         #                               dtype=torch.int64).view(-1, 2)
         # `superblock_to_migrate` is a gpu tensor which records the dest chunk
         # in a remote SP GPU worker
-        superblock_to_migrate = torch.tensor(
-            execute_model_req.superblock_to_migrate,
-            device=self.device,
-            dtype=torch.int64).view(-1)
-
+        if execute_model_req.superblock_to_migrate is not None:
+            superblock_to_migrate = torch.tensor(
+                execute_model_req.superblock_to_migrate,
+                device=self.device,
+                dtype=torch.int64).view(-1)
+        else:
+            superblock_to_migrate = None
         return WorkerInput(num_seq_groups=num_seq_groups,
                            blocks_to_swap_in=blocks_to_swap_in,
                            blocks_to_swap_out=blocks_to_swap_out,
