@@ -314,6 +314,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
     def _prepare_model_input_tensors(
         self,
         seq_group_metadata_list: List[SequenceGroupMetadata],
+        is_profile_run:Optional[bool],
     ) -> TModelInputForGPU:
         """Helper method to prepare the model input based on a given sequence
         group. Prepares metadata needed for the base model forward pass but not
@@ -402,6 +403,8 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         paged_kv_indptr: List[int] = [0]
         # paged_kv_last_page_len is the length of the last page of each request
         paged_kv_last_page_len: List[int] = []
+        if is_profile_run is None:
+            is_profile_run=False
 
         if len(seq_group_metadata_list) == 0:
             return self._model_input_cls()
@@ -531,6 +534,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
 
                 # currently, distributed inference is only performed
                 # for decode stage.
+
                 if remote_len == 0 or is_prompt:
                     block_tables.append(block_table)
                     seq_lens.append(sliding_seq_len - remote_len)
@@ -719,6 +723,9 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                     q_index = q_index + 1
                 # Prepare the remote metadata
                 old_index = old_index + 1
+                #todo generate remote_meta for profile_run
+                if is_profile_run:
+                    pass
 
         # append long-decoding metadata to the tail of list.
         if num_decode_tokens_long > 0:
@@ -1026,7 +1033,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         # Run the model with the dummy inputs.
         num_layers = self.model_config.get_num_layers(self.parallel_config)
         kv_caches = [None] * num_layers
-        model_input = self.prepare_model_input(seqs)
+        model_input = self.prepare_model_input(seqs,True)
         self.execute_model(model_input, kv_caches)
         torch.cuda.synchronize()
         return
@@ -1308,6 +1315,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
     def prepare_model_input(
         self,
         seq_group_metadata_list: List[SequenceGroupMetadata],
+        is_profile_run: Optional[bool],
     ) -> ModelInputForGPUWithSamplingMetadata:
         """Prepare the model input based on a given sequence group, including
         metadata for the sampling step.
@@ -1323,7 +1331,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         If cuda graph is required, this API automatically pads inputs.
         """
         model_input = self._prepare_model_input_tensors(
-            seq_group_metadata_list)
+            seq_group_metadata_list,is_profile_run)
         seq_lens = reshape_list(model_input.seq_lens,
                                 model_input.output_reshape_index)
         query_lens = reshape_list(model_input.query_lens,

@@ -137,6 +137,7 @@ class ModelRunnerBase(ABC, Generic[T]):
     def prepare_model_input(
         self,
         seq_group_metadata_list: List[SequenceGroupMetadata],
+        is_profile_run: Optional[bool],
     ) -> T:
         """
         Prepare the inputs to ModelRunnerBase.execute_model from an execution
