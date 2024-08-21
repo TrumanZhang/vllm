@@ -962,7 +962,7 @@ def initialize_model_parallel(
         group_ranks.append(ranks)
     if need_tp_pp_init:
         _TP = init_model_parallel_group(group_ranks,
-                                    get_world_group().local_rank, backend)
+                                        get_world_group().local_rank, backend)
 
     # Build the pipeline model-parallel groups.
     num_pipeline_model_parallel_groups: int = (tp_pp_world_size //
@@ -977,7 +977,7 @@ def initialize_model_parallel(
         group_ranks.append(ranks)
     if need_tp_pp_init:
         _PP = init_model_parallel_group(group_ranks,
-                                    get_world_group().local_rank, backend)
+                                        get_world_group().local_rank, backend)
 
     # Build the sequence-parallel groups.
     # Each tp or sp rank should have a sequence parallel group
@@ -985,15 +985,15 @@ def initialize_model_parallel(
     global _SP
     assert _SP is None, ("sequence parallel groups are already initialized")
     _SP = [None] * num_sequence_parallel_groups
-    logger.info("init_sp")
-    for i in range(num_sequence_parallel_groups):
-        ranks = [i] + list(
-            range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
-        logger.info("enter_init")
-        if get_world_group().rank in ranks:
-            local_rank = get_world_group().local_rank
-            logger.info("rank:%d,index:%d", local_rank, i)
-            _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
+    # logger.info("init_sp")
+    # for i in range(num_sequence_parallel_groups):
+    #     ranks = [i] + list(
+    #         range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
+    #     logger.info("enter_init")
+    #     if get_world_group().rank in ranks:
+    #         local_rank = get_world_group().local_rank
+    #         logger.info("rank:%d,index:%d", local_rank, i)
+    #         _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
 
 
 def ensure_model_parallel_initialized(
@@ -1036,6 +1036,7 @@ def model_parallel_is_initialized():
             if item is None:
                 sp_is_initialized = False
                 break
+    sp_is_initialized = True
     return (_TP is not None and _PP is not None and sp_is_initialized)
 
 
