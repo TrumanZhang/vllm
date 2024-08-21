@@ -1,3 +1,4 @@
+import copy
 from abc import ABC, abstractmethod
 from typing import List, Optional, Set, Tuple
 
@@ -37,6 +38,8 @@ class ExecutorBase(ABC):
         self.device_config = device_config
         self.vision_language_config = vision_language_config
         self.speculative_config = speculative_config
+        self.only_attn_model_config = copy.deepcopy(self.model_config)
+        self.only_attn_model_config.model = "only_attn"
 
         self._init_executor()
 

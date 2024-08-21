@@ -39,9 +39,6 @@ class RayGPUExecutor(DistributedGPUExecutor):
 
         # Get the model config for the only attn in SP
         # from the input model config.
-        if (self.parallel_config.sequence_parallel_size > 0):
-            self.only_attn_model_config = copy.deepcopy(self.model_config)
-            self.only_attn_model_config.model = "only_attn"
 
         # Create the parallel GPU workers.
         self._init_workers_ray(placement_group)
@@ -230,6 +227,7 @@ class RayGPUExecutor(DistributedGPUExecutor):
                 distributed_init_method=distributed_init_method,
             ) for rank, (node_id, _) in enumerate(worker_node_and_gpu_ids)
         ]
+
         self._run_workers("init_worker", all_kwargs=init_worker_all_kwargs)
 
         self._run_workers("init_device")
