@@ -985,15 +985,17 @@ def initialize_model_parallel(
     global _SP
     assert _SP is None, ("sequence parallel groups are already initialized")
     _SP = [None] * num_sequence_parallel_groups
-    # logger.info("init_sp")
-    # for i in range(num_sequence_parallel_groups):
-    #     ranks = [i] + list(
-    #         range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
-    #     logger.info("enter_init")
-    #     if get_world_group().rank in ranks:
-    #         local_rank = get_world_group().local_rank
-    #         logger.info("rank:%d,index:%d", local_rank, i)
-    #         _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
+    logger.info("init_sp")
+    group_ranks=[]
+    for i in range(num_sequence_parallel_groups):
+        ranks = [i] + list(
+            range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
+        group_ranks.append(ranks)
+    for ranks in group_ranks:
+        if get_world_group().rank in ranks:
+            local_rank = get_world_group().local_rank
+            logger.info("rank:%d,index:%d", local_rank, i)
+            _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
 
 
 def ensure_model_parallel_initialized(
