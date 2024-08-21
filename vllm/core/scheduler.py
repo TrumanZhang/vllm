@@ -126,7 +126,7 @@ class SchedulerOutputs:
     # Blocks to migrate. list of GPU -> [GPU, rank].
     blocks_to_migrate: List[Tuple[int, int, int]]
     # Dest superblock idx and rank. Note: we only set 1 superblock in master
-    superblock_to_migrate: Optional[Tuple[int, int]] = None
+    superblock_to_migrate: Optional[Tuple[int, int]]
     # Sequence groups that are going to be ignored.
     ignored_seq_groups: List[SequenceGroup]
     # The number of slots for lookahead decoding.
