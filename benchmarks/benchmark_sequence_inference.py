@@ -371,6 +371,21 @@ if __name__ == "__main__":
                         default=False,
                         help='enbale the long sequence for the '
                         'distributed inference.')
+    #  block_migrate_size: int = 1024
+    # block_migrate_threshold: int = 2048
+    # block_migrate_start: int = 1024
+    parser.add_argument('--block-migrate-size',
+                        type=int,
+                        default=None,
+                        help='the migrate size per time of kv cache migration.')
+    parser.add_argument('--block-migrate-threshold',
+                        type=int,
+                        default=None,
+                        help='the threshold length of starting the kv cache migration.')
+    parser.add_argument('--block-migrate-start',
+                        type=int,
+                        default=None,
+                        help='the migrate start index of kv cache migration.')
     args = parser.parse_args()
 
     if args.backend == "vllm":
