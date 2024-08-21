@@ -783,7 +783,7 @@ def init_model_parallel_group(group_ranks: List[List[int]], local_rank: int,
         group_ranks=group_ranks,
         local_rank=local_rank,
         torch_distributed_backend=backend,
-        use_pynccl=False,
+        use_pynccl=True,
         use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,
     )
 
@@ -994,7 +994,8 @@ def initialize_model_parallel(
     for ranks in group_ranks:
         if get_world_group().rank in ranks:
             local_rank = get_world_group().local_rank
-            logger.info("rank:%d,index:%d", local_rank, i)
+            ranks_str=",".join(map(str,ranks))
+            logger.info("rank:%d,index:%s", local_rank, ranks_str)
             _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
 
 
@@ -1030,14 +1031,14 @@ def ensure_model_parallel_initialized(
 
 def model_parallel_is_initialized():
     """Check if tensor and pipeline parallel groups are initialized."""
-    sp_is_initialized = True
-    if _SP is None:
-        sp_is_initialized = False
-    else:
-        for item in _SP:
-            if item is None:
-                sp_is_initialized = False
-                break
+    # sp_is_initialized = True
+    # if _SP is None:
+    #     sp_is_initialized = False
+    # else:
+    #     for item in _SP:
+    #         if item is None:
+    #             sp_is_initialized = False
+    #             break
     sp_is_initialized = True
     return (_TP is not None and _PP is not None and sp_is_initialized)
 
@@ -1183,5 +1184,5 @@ def is_in_the_same_node(pg: ProcessGroup):
         if rank == 0 and shm:
             shm.unlink()
     torch.distributed.all_reduce(is_in_the_same_node, group=pg)
-
+    logger.info("is_in_the_same_node:%d==%d",is_in_the_same_node.sum().item(),world_size)
     return is_in_the_same_node.sum().item() == world_size
