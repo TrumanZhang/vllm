@@ -112,6 +112,9 @@ class CustomAllreduce:
         assert dist.get_backend(group) != dist.Backend.NCCL, (
             "CustomAllreduce should be attached to a non-NCCL group.")
 
+        world_size = torch.distributed.get_world_size(group=self.group)
+        logger.info("group-coordinator,init customallreduce"
+                    "cpu_group_size:%d",world_size)
         if not is_in_the_same_node(group):
             # No need to initialize custom allreduce for multi-node case.
             logger.warning(

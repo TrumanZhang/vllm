@@ -192,6 +192,10 @@ class GroupCoordinator:
         from vllm.distributed.device_communicators.shm_broadcast import (
             ShmRingBufferIO)
         self.shm_broadcaster: Optional[ShmRingBufferIO] = None
+        world_size = torch.distributed.get_world_size(group=self.cpu_group)
+        logger.info("group-coordinator,init shm_broadcaster,ranks_size:%d"
+                    "cpu_group_size:%d"
+                    ,len(self.ranks),world_size)
         if self.world_size > 1 and is_in_the_same_node(self.cpu_group):
             self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
                 self.cpu_group, 1 << 22, 6)
@@ -1014,7 +1018,7 @@ def ensure_model_parallel_initialized(
     """
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
-    if not model_parallel_is_initialized():
+    if not model_parallel_is_initialized(sequence_parallel_size):
         initialize_model_parallel(tensor_model_parallel_size,
                                   pipeline_model_parallel_size,
                                   sequence_parallel_size, backend)
@@ -1032,17 +1036,19 @@ def ensure_model_parallel_initialized(
         f"{pipeline_model_parallel_size=}")
 
 
-def model_parallel_is_initialized():
+def model_parallel_is_initialized(sequence_parallel_size: int = 0):
     """Check if tensor and pipeline parallel groups are initialized."""
-    # sp_is_initialized = True
-    # if _SP is None:
-    #     sp_is_initialized = False
-    # else:
-    #     for item in _SP:
-    #         if item is None:
-    #             sp_is_initialized = False
-    #             break
-    sp_is_initialized = True
+    
+    sp_is_initialized=True
+    if sequence_parallel_size!=0:
+        sp_is_initialized = True
+        if _SP is None:
+            sp_is_initialized = False
+        else:
+            for item in _SP:
+                if item is None:
+                    sp_is_initialized = False
+                    break
     return (_TP is not None and _PP is not None and sp_is_initialized)
 
 
