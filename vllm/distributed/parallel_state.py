@@ -817,6 +817,8 @@ _SP: Optional[List[Optional[GroupCoordinator]]] = None
 def get_sp_group(rank: int) -> GroupCoordinator:
     assert _SP is not None, (
         "pipeline model parallel groups are not initialized")
+    if len(_SP)==0:
+        return None
     assert rank < len(_SP) and rank >= 0, ("rank is out of range of sp groups")
     assert _SP[rank] is not None, (
         f"sequence parallel group of rank {rank} is not initialized")
