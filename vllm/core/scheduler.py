@@ -126,7 +126,7 @@ class SchedulerOutputs:
     # Blocks to migrate. list of GPU -> [GPU, rank].
     blocks_to_migrate: List[Tuple[int, int, int]]
     # Dest superblock idx and rank. Note: we only set 1 superblock in master
-    superblock_to_migrate: Tuple
+    superblock_to_migrate: Optional[Tuple[int, int]] = None
     # Sequence groups that are going to be ignored.
     ignored_seq_groups: List[SequenceGroup]
     # The number of slots for lookahead decoding.
@@ -839,7 +839,10 @@ class Scheduler:
             self.block_manager.format_kvcache_migrate_blocks(
                 blocks_to_migrate, blocks_to_copy_for_migration)
             superblock_size = len(blocks_to_migrate)
-            superblock_to_migrate = (blocks_to_migrate[0][2] %
+            if superblock_size==0:
+                superblock_to_migrate=None
+            else:
+                superblock_to_migrate = (blocks_to_migrate[0][2] %
                                      superblock_size,
                                      blocks_to_migrate[0][1])
         # There should be no prefill from running queue because this policy

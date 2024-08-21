@@ -274,7 +274,7 @@ class LocalOrDistributedWorkerBase(WorkerBase):
                 execute_model_req=execute_model_req)
             model_input: ModelRunnerInputBase = (
                 self.model_runner.prepare_model_input(
-                    execute_model_req.seq_group_metadata_list),False)
+                    execute_model_req.seq_group_metadata_list,False))
             num_steps = execute_model_req.num_steps
 
             # broadcast inputs for all workers in its tp_group.
