@@ -901,7 +901,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                            start)
                     ])
                 start = start + self.block_migrate_size
-        self.migrate_list = List(migrate_set)
+        self.migrate_list = list(migrate_set)
 
     def get_kvcache_migrate_block(self, mapping: List[Tuple[int, int,
                                                             int]]) -> None:

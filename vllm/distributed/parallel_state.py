@@ -953,7 +953,7 @@ def initialize_model_parallel(
     # Build the tensor model-parallel groups.
     num_tensor_model_parallel_groups: int = (tp_pp_world_size //
                                              tensor_model_parallel_size)
-
+    logger.info("init_tp,%d",get_world_group().rank)
     global _TP
     assert _TP is None, ("tensor model parallel group is already initialized")
     group_ranks = []
@@ -969,6 +969,7 @@ def initialize_model_parallel(
     # Build the pipeline model-parallel groups.
     num_pipeline_model_parallel_groups: int = (tp_pp_world_size //
                                                pipeline_model_parallel_size)
+    logger.info("init_pp,%d",get_world_group().rank)
     global _PP
     assert _PP is None, (
         "pipeline model parallel group is already initialized")
@@ -987,7 +988,7 @@ def initialize_model_parallel(
     global _SP
     assert _SP is None, ("sequence parallel groups are already initialized")
     _SP = [None] * num_sequence_parallel_groups
-    logger.info("init_sp")
+    logger.info("init_sp,%d",get_world_group().rank)
     group_ranks=[]
     for i in range(num_sequence_parallel_groups):
         ranks = [i] + list(
