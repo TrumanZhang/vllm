@@ -194,8 +194,7 @@ class GroupCoordinator:
         self.shm_broadcaster: Optional[ShmRingBufferIO] = None
         world_size = torch.distributed.get_world_size(group=self.cpu_group)
         logger.info("group-coordinator,init shm_broadcaster,ranks_size:%d"
-                    "cpu_group_size:%d"
-                    ,len(self.ranks),world_size)
+                    "cpu_group_size:%d", len(self.ranks), world_size)
         if self.world_size > 1 and is_in_the_same_node(self.cpu_group):
             self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
                 self.cpu_group, 1 << 22, 6)
@@ -904,6 +903,45 @@ def init_distributed_environment(
             "world group already initialized with a different world size")
 
 
+def initialize_sequence_parallel(
+    tensor_model_parallel_size: int = 1,
+    pipeline_model_parallel_size: int = 1,
+    sequence_parallel_size: int = 0,
+    backend: Optional[str] = None,
+) -> None:
+    # Get world size and rank. Ensure some consistencies.
+    assert torch.distributed.is_initialized()
+    world_size: int = torch.distributed.get_world_size()
+    tp_pp_world_size: int = world_size - sequence_parallel_size
+
+    if (tp_pp_world_size !=
+            tensor_model_parallel_size * pipeline_model_parallel_size):
+        raise RuntimeError(
+            f"world_size ({tp_pp_world_size}) is not equal to "
+            f"tensor_model_parallel_size ({tensor_model_parallel_size}) x "
+            f"pipeline_model_parallel_size ({pipeline_model_parallel_size})")
+
+    sp_world_size: int = sequence_parallel_size
+    # Build the sequence-parallel groups.
+    # Each tp or sp rank should have a sequence parallel group
+    num_sequence_parallel_groups: int = tp_pp_world_size
+    global _SP
+    assert _SP is None, ("sequence parallel groups are already initialized")
+    _SP = [None] * num_sequence_parallel_groups
+    logger.info("init_sp,%d", get_world_group().rank)
+    group_ranks = []
+    for i in range(num_sequence_parallel_groups):
+        ranks = [i] + list(
+            range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
+        group_ranks.append(ranks)
+    for ranks in group_ranks:
+        if get_world_group().rank in ranks:
+            local_rank = get_world_group().local_rank
+            ranks_str = ",".join(map(str, ranks))
+            logger.info("rank:%d,index:%s", local_rank, ranks_str)
+            _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
+
+
 def initialize_model_parallel(
     tensor_model_parallel_size: int = 1,
     pipeline_model_parallel_size: int = 1,
@@ -945,7 +983,6 @@ def initialize_model_parallel(
     world_size: int = torch.distributed.get_world_size()
     tp_pp_world_size: int = world_size - sequence_parallel_size
     sp_world_size: int = sequence_parallel_size
-    need_tp_pp_init = get_world_group().rank < tp_pp_world_size
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
 
@@ -959,7 +996,7 @@ def initialize_model_parallel(
     # Build the tensor model-parallel groups.
     num_tensor_model_parallel_groups: int = (tp_pp_world_size //
                                              tensor_model_parallel_size)
-    logger.info("init_tp,%d",get_world_group().rank)
+    logger.info("init_tp,%d", get_world_group().rank)
     global _TP
     assert _TP is None, ("tensor model parallel group is already initialized")
     group_ranks = []
@@ -968,14 +1005,14 @@ def initialize_model_parallel(
             range(i * tensor_model_parallel_size,
                   (i + 1) * tensor_model_parallel_size))
         group_ranks.append(ranks)
-    if need_tp_pp_init:
-        _TP = init_model_parallel_group(group_ranks,
-                                        get_world_group().local_rank, backend)
+
+    _TP = init_model_parallel_group(group_ranks,
+                                    get_world_group().local_rank, backend)
 
     # Build the pipeline model-parallel groups.
     num_pipeline_model_parallel_groups: int = (tp_pp_world_size //
                                                pipeline_model_parallel_size)
-    logger.info("init_pp,%d",get_world_group().rank)
+    logger.info("init_pp,%d", get_world_group().rank)
     global _PP
     assert _PP is None, (
         "pipeline model parallel group is already initialized")
@@ -984,28 +1021,9 @@ def initialize_model_parallel(
         ranks = list(
             range(i, tp_pp_world_size, num_pipeline_model_parallel_groups))
         group_ranks.append(ranks)
-    if need_tp_pp_init:
-        _PP = init_model_parallel_group(group_ranks,
-                                        get_world_group().local_rank, backend)
 
-    # Build the sequence-parallel groups.
-    # Each tp or sp rank should have a sequence parallel group
-    num_sequence_parallel_groups: int = tp_pp_world_size
-    global _SP
-    assert _SP is None, ("sequence parallel groups are already initialized")
-    _SP = [None] * num_sequence_parallel_groups
-    logger.info("init_sp,%d",get_world_group().rank)
-    group_ranks=[]
-    for i in range(num_sequence_parallel_groups):
-        ranks = [i] + list(
-            range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
-        group_ranks.append(ranks)
-    for ranks in group_ranks:
-        if get_world_group().rank in ranks:
-            local_rank = get_world_group().local_rank
-            ranks_str=",".join(map(str,ranks))
-            logger.info("rank:%d,index:%s", local_rank, ranks_str)
-            _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
+    _PP = init_model_parallel_group(group_ranks,
+                                    get_world_group().local_rank, backend)
 
 
 def ensure_model_parallel_initialized(
@@ -1020,10 +1038,18 @@ def ensure_model_parallel_initialized(
     """
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
-    if not model_parallel_is_initialized(sequence_parallel_size):
+    need_tp_pp_init = get_world_group().rank < tensor_model_parallel_size * \
+        pipeline_model_parallel_size
+    if need_tp_pp_init and not model_parallel_is_initialized():
         initialize_model_parallel(tensor_model_parallel_size,
                                   pipeline_model_parallel_size,
                                   sequence_parallel_size, backend)
+        logger.info("rank:%d tp_pp initialized",get_world_group().rank)
+    if not sequence_parallel_is_initialized(sequence_parallel_size):
+        initialize_sequence_parallel(tensor_model_parallel_size,
+                                  pipeline_model_parallel_size,
+                                  sequence_parallel_size, backend)
+        logger.info("rank:%d sp initialized",get_world_group().rank)
         return
 
     assert (
@@ -1040,9 +1066,14 @@ def ensure_model_parallel_initialized(
 
 def model_parallel_is_initialized(sequence_parallel_size: int = 0):
     """Check if tensor and pipeline parallel groups are initialized."""
-    
-    sp_is_initialized=True
-    if sequence_parallel_size!=0:
+    return (_TP is not None and _PP is not None)
+
+
+def sequence_parallel_is_initialized(sequence_parallel_size: int = 0):
+    """Check if tensor and pipeline parallel groups are initialized."""
+
+    sp_is_initialized = True
+    if sequence_parallel_size != 0:
         sp_is_initialized = True
         if _SP is None:
             sp_is_initialized = False
@@ -1051,7 +1082,7 @@ def model_parallel_is_initialized(sequence_parallel_size: int = 0):
                 if item is None:
                     sp_is_initialized = False
                     break
-    return (_TP is not None and _PP is not None and sp_is_initialized)
+    return sp_is_initialized
 
 
 _TP_STATE_PATCHED = False
@@ -1195,5 +1226,6 @@ def is_in_the_same_node(pg: ProcessGroup):
         if rank == 0 and shm:
             shm.unlink()
     torch.distributed.all_reduce(is_in_the_same_node, group=pg)
-    logger.info("is_in_the_same_node:%d==%d",is_in_the_same_node.sum().item(),world_size)
+    logger.info("is_in_the_same_node:%d==%d",
+                is_in_the_same_node.sum().item(), world_size)
     return is_in_the_same_node.sum().item() == world_size
