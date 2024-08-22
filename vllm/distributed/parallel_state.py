@@ -935,12 +935,15 @@ def initialize_sequence_parallel(
         ranks = [i] + list(
             range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
         group_ranks.append(ranks)
+    index = 0
     for ranks in group_ranks:
         if get_world_group().rank in ranks:
             local_rank = get_world_group().local_rank
             ranks_str = ",".join(map(str, ranks))
             logger.info("rank:%d,index:%s", local_rank, ranks_str)
-            _SP[i] = init_model_parallel_group([ranks], local_rank, backend)
+            _SP[index] = init_model_parallel_group(
+                [ranks], local_rank, backend)
+        index += 1
 
 
 def initialize_model_parallel(
