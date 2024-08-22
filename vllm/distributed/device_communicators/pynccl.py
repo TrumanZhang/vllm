@@ -71,7 +71,9 @@ class PyNcclCommunicator:
         tensor = torch.ByteTensor(list(self.unique_id.internal))
         ranks = dist.get_process_group_ranks(group)
         # arg `src` in `broadcast` is the global rank
+        logger.info("pynccl,test_broadcast,world_size:%d,rank:%d",self.world_size,self.rank)
         dist.broadcast(tensor, src=ranks[0], group=group)
+        logger.info("end pynccl,test_broadcast,world_size:%d,rank:%d",self.world_size,self.rank)
         byte_list = tensor.tolist()
         for i, byte in enumerate(byte_list):
             self.unique_id.internal[i] = byte
