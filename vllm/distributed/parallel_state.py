@@ -901,7 +901,8 @@ def init_distributed_environment(
     else:
         assert _WORLD.world_size == torch.distributed.get_world_size(), (
             "world group already initialized with a different world size")
-    logger.info("world initialized:%d",_WORLD.rank)
+    logger.info("world initialized:%d", _WORLD.rank)
+
 
 def initialize_sequence_parallel(
     tensor_model_parallel_size: int = 1,
@@ -1038,20 +1039,22 @@ def ensure_model_parallel_initialized(
     """
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
-    need_tp_pp_init = get_world_group().rank < tensor_model_parallel_size * \
+    tp_pp_size = tensor_model_parallel_size * \
         pipeline_model_parallel_size
-    if need_tp_pp_init and not model_parallel_is_initialized():
+    is_tp_pp_node = get_world_group().rank < tp_pp_size
+    if is_tp_pp_node and not model_parallel_is_initialized():
         initialize_model_parallel(tensor_model_parallel_size,
                                   pipeline_model_parallel_size,
                                   sequence_parallel_size, backend)
-        logger.info("rank:%d tp_pp initialized",get_world_group().rank)
-    if not sequence_parallel_is_initialized(sequence_parallel_size):
+        logger.info("rank:%d tp_pp initialized", get_world_group().rank)
+    if not sequence_parallel_is_initialized(sequence_parallel_size, is_tp_pp_node,
+                                            get_world_group().rank):
         initialize_sequence_parallel(tensor_model_parallel_size,
-                                  pipeline_model_parallel_size,
-                                  sequence_parallel_size, backend)
-        logger.info("rank:%d sp initialized",get_world_group().rank)
+                                     pipeline_model_parallel_size,
+                                     sequence_parallel_size, backend)
+        logger.info("rank:%d sp initialized", get_world_group().rank)
         return
-    if need_tp_pp_init:
+    if is_tp_pp_node:
         assert (
             get_tensor_model_parallel_world_size() == tensor_model_parallel_size
         ), ("tensor parallel group already initialized, but of unexpected size: "
@@ -1069,19 +1072,30 @@ def model_parallel_is_initialized():
     return (_TP is not None and _PP is not None)
 
 
-def sequence_parallel_is_initialized(sequence_parallel_size: int = 0):
+def sequence_parallel_is_initialized(sequence_parallel_size: int,
+                                     is_tp_pp_node: bool, rank: int):
     """Check if tensor and pipeline parallel groups are initialized."""
-
-    sp_is_initialized = True
-    if sequence_parallel_size != 0:
+    if sequence_parallel_size == 0:
+        return True
+    if is_tp_pp_node:
         sp_is_initialized = True
         if _SP is None:
             sp_is_initialized = False
         else:
-            for item in _SP:
-                if item is None:
-                    sp_is_initialized = False
-                    break
+            sp = _SP[rank]
+            if sp is None:
+                sp_is_initialized = False
+    else:
+        sp_is_initialized = True
+        if sequence_parallel_size != 0:
+            sp_is_initialized = True
+            if _SP is None:
+                sp_is_initialized = False
+            else:
+                for item in _SP:
+                    if item is None:
+                        sp_is_initialized = False
+                        break
     return sp_is_initialized
 
 
