@@ -17,7 +17,7 @@ do
                                 --dataset /home/work02/work02.new/llm/benchmarks/vllmfile-main/data/ShareGPT_V3_unfiltered_cleaned_split.json \
                                 --max-num-seqs ${numseqs[$k]} --output-len ${outputlen[$l]} --num-prompts ${numprompts[$j]} \
                                 --tensor-parallel-size ${parallelsize[$i]} --sequence-parallel-size 2 \
-                                --result /home/work02/work02.new/llm/vllm_sp/data/result.csv --enable-long-sequence true\
+                                --result /home/work02/work02.new/llm/vllm_sp/data/result.csv --enable-long-sequence 1\
                                 --max-model-len 8192 --max-num-batched-tokens 1024\
                                 --block-migrate-threshold 8192 --block-migrate-size 1024 --block-migrate-start 8192
                                 echo "parallel size:${parallelsize[$i]},num prompts:${numprompts[$j]},num batched seqs:${numseqs[$k]},\

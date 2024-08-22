@@ -89,11 +89,12 @@ class PyNcclCommunicator:
             self.comm: ncclComm_t = self.nccl.ncclCommInitRank(
                 self.world_size, self.unique_id, self.rank)
             self.stream = torch.cuda.Stream()
-
+            logger.info("pynccl,test_all_reduce,world_size:%d,rank:%d",self.world_size,self.rank)
             # A small all_reduce for warmup.
             data = torch.zeros(1, device=device)
             self.all_reduce(data)
             self.stream.synchronize()
+            logger.info("pynccl,end test_all_reduce,world_size:%d,rank:%d",self.world_size,self.rank)
             del data
 
         # by default it is disabled, e.g. in profiling models and prefill phase.

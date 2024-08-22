@@ -91,8 +91,9 @@ def run_vllm(
     pipeline_parallel_size: int,
     sequence_parallel_size: int,
     max_model_len: Optional[int],
-    enable_long_sequence: bool,
+    enable_long_sequence: int,
 ) -> float:
+    enable=enable_long_sequence!=0
     llm = LLM(
         model=model,
         tokenizer=tokenizer,
@@ -106,7 +107,7 @@ def run_vllm(
         pipeline_parallel_size=pipeline_parallel_size,
         sequence_parallel_size=sequence_parallel_size,
         max_model_len=max_model_len,
-        enable_long_sequence=enable_long_sequence,
+        enable_long_sequence=enable,
     )
 
     prompts: List[str] = []
@@ -367,8 +368,8 @@ if __name__ == "__main__":
                         help='enbale the long sequence for the'
                         ' distributed inference.')
     parser.add_argument('--enable-long-sequence',
-                        type=bool,
-                        default=False,
+                        type=int,
+                        default=0,
                         help='enbale the long sequence for the '
                         'distributed inference.')
     #  block_migrate_size: int = 1024
