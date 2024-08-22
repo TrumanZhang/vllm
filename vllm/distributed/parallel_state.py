@@ -901,7 +901,7 @@ def init_distributed_environment(
     else:
         assert _WORLD.world_size == torch.distributed.get_world_size(), (
             "world group already initialized with a different world size")
-
+    logger.info("world initialized:%d",_WORLD.rank)
 
 def initialize_sequence_parallel(
     tensor_model_parallel_size: int = 1,
@@ -1051,20 +1051,20 @@ def ensure_model_parallel_initialized(
                                   sequence_parallel_size, backend)
         logger.info("rank:%d sp initialized",get_world_group().rank)
         return
+    if need_tp_pp_init:
+        assert (
+            get_tensor_model_parallel_world_size() == tensor_model_parallel_size
+        ), ("tensor parallel group already initialized, but of unexpected size: "
+            f"{get_tensor_model_parallel_world_size()=} vs. "
+            f"{tensor_model_parallel_size=}")
+        pp_world_size = get_pp_group().world_size
+        assert (pp_world_size == pipeline_model_parallel_size), (
+            "pipeline parallel group already initialized, but of unexpected size: "
+            f"{pp_world_size=} vs. "
+            f"{pipeline_model_parallel_size=}")
 
-    assert (
-        get_tensor_model_parallel_world_size() == tensor_model_parallel_size
-    ), ("tensor parallel group already initialized, but of unexpected size: "
-        f"{get_tensor_model_parallel_world_size()=} vs. "
-        f"{tensor_model_parallel_size=}")
-    pp_world_size = get_pp_group().world_size
-    assert (pp_world_size == pipeline_model_parallel_size), (
-        "pipeline parallel group already initialized, but of unexpected size: "
-        f"{pp_world_size=} vs. "
-        f"{pipeline_model_parallel_size=}")
 
-
-def model_parallel_is_initialized(sequence_parallel_size: int = 0):
+def model_parallel_is_initialized():
     """Check if tensor and pipeline parallel groups are initialized."""
     return (_TP is not None and _PP is not None)
 
