@@ -165,7 +165,7 @@ class GroupCoordinator:
         cpu_world_size = torch.distributed.get_world_size(self.cpu_group)
         logger.info("init_groupCoordinator,local_rank=%d,rank=%d,rank_in_group=%d,"
                     "group_ranks=%s,world_size=%d,device_world_size=%d,cpu_world_size:%d",
-                    self.last_rank, self.rank, self.rank_in_group, rank_str,
+                    self.local_rank, self.rank, self.rank_in_group, rank_str,
                     self.world_size, device_world_size, cpu_world_size)
 
         self.use_pynccl = use_pynccl
@@ -179,7 +179,6 @@ class GroupCoordinator:
 
         self.pynccl_comm: Optional[PyNcclCommunicator]
         if use_pynccl and self.world_size > 1:
-            device_world_size = torch_distributed_backend.get
             logger.info("init groupCoordinator--pyncc_comm")
             self.pynccl_comm = PyNcclCommunicator(
                 group=self.cpu_group,
