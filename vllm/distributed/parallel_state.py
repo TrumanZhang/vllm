@@ -160,6 +160,13 @@ class GroupCoordinator:
             self.device = torch.device(f"cuda:{local_rank}")
         else:
             self.device = torch.device("cpu")
+        rank_str = ",".join(map(str, self.ranks))
+        device_world_size = torch.distributed.get_world_size(self.device_group)
+        cpu_world_size = torch.distributed.get_world_size(self.cpu_group)
+        logger.info("init_groupCoordinator,local_rank=%d,rank=%d,rank_in_group=%d,"
+                    "group_ranks=%s,world_size=%d,device_world_size=%d,cpu_world_size:%d",
+                    self.last_rank, self.rank, self.rank_in_group, rank_str,
+                    self.world_size, device_world_size, cpu_world_size)
 
         self.use_pynccl = use_pynccl
         self.use_custom_allreduce = use_custom_allreduce
@@ -172,32 +179,37 @@ class GroupCoordinator:
 
         self.pynccl_comm: Optional[PyNcclCommunicator]
         if use_pynccl and self.world_size > 1:
+            device_world_size = torch_distributed_backend.get
+            logger.info("init groupCoordinator--pyncc_comm")
             self.pynccl_comm = PyNcclCommunicator(
                 group=self.cpu_group,
                 device=self.device,
             )
         else:
             self.pynccl_comm = None
+        logger.info("end init groupCoordinator--pyncc_comm")
 
         self.ca_comm: Optional[CustomAllreduce]
         if use_custom_allreduce and self.world_size > 1:
             # Initialize a custom fast all-reduce implementation.
+            logger.info("init groupCoordinator--customAllreduce")
             self.ca_comm = CustomAllreduce(
                 group=self.cpu_group,
                 device=self.device,
             )
         else:
             self.ca_comm = None
+        logger.info("end init groupCoordinator--customAllreduce")
 
         from vllm.distributed.device_communicators.shm_broadcast import (
             ShmRingBufferIO)
         self.shm_broadcaster: Optional[ShmRingBufferIO] = None
-        world_size = torch.distributed.get_world_size(group=self.cpu_group)
-        logger.info("group-coordinator,init shm_broadcaster,ranks_size:%d"
-                    "cpu_group_size:%d", len(self.ranks), world_size)
+
         if self.world_size > 1 and is_in_the_same_node(self.cpu_group):
+            logger.info("init groupCoordinator--shm_broastcaster")
             self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
                 self.cpu_group, 1 << 22, 6)
+        logger.info("end init groupCoordinator--shm_broastcaster")
 
     @property
     def first_rank(self):
@@ -929,18 +941,24 @@ def initialize_sequence_parallel(
     global _SP
     assert _SP is None, ("sequence parallel groups are already initialized")
     _SP = [None] * num_sequence_parallel_groups
-    logger.info("init_sp,%d", get_world_group().rank)
     group_ranks = []
+    ranks_str = ""
     for i in range(num_sequence_parallel_groups):
         ranks = [i] + list(
             range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
+        rank_str = ",".join(map(str, ranks))
+        ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
+    logger.info("init_sp,local_rank=%d,rank=%d,group_ranks=%s",
+                get_world_group().local_rank,
+                get_world_group().rank, ranks_str)
     index = 0
     for ranks in group_ranks:
         if get_world_group().rank in ranks:
             local_rank = get_world_group().local_rank
-            ranks_str = ",".join(map(str, ranks))
-            logger.info("rank:%d,index:%s", local_rank, ranks_str)
+            rank_str = ",".join(map(str, ranks))
+            logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
+                        local_rank, get_world_group().rank, index, rank_str)
             _SP[index] = init_model_parallel_group(
                 [ranks], local_rank, backend)
         index += 1
@@ -986,7 +1004,6 @@ def initialize_model_parallel(
     assert torch.distributed.is_initialized()
     world_size: int = torch.distributed.get_world_size()
     tp_pp_world_size: int = world_size - sequence_parallel_size
-    sp_world_size: int = sequence_parallel_size
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
 
@@ -1000,32 +1017,41 @@ def initialize_model_parallel(
     # Build the tensor model-parallel groups.
     num_tensor_model_parallel_groups: int = (tp_pp_world_size //
                                              tensor_model_parallel_size)
-    logger.info("init_tp,%d", get_world_group().rank)
+
     global _TP
     assert _TP is None, ("tensor model parallel group is already initialized")
     group_ranks = []
+    ranks_str = ""
     for i in range(num_tensor_model_parallel_groups):
         ranks = list(
             range(i * tensor_model_parallel_size,
                   (i + 1) * tensor_model_parallel_size))
+        rank_str = ",".join(map(str, ranks))
+        ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
-
+    logger.info("init_tp,local_rank=%d,rank=%d,group_ranks=%s",
+                get_world_group().local_rank,
+                get_world_group().rank, ranks_str)
     _TP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
 
     # Build the pipeline model-parallel groups.
     num_pipeline_model_parallel_groups: int = (tp_pp_world_size //
                                                pipeline_model_parallel_size)
-    logger.info("init_pp,%d", get_world_group().rank)
     global _PP
     assert _PP is None, (
         "pipeline model parallel group is already initialized")
     group_ranks = []
+    ranks_str = ""
     for i in range(num_pipeline_model_parallel_groups):
         ranks = list(
             range(i, tp_pp_world_size, num_pipeline_model_parallel_groups))
+        rank_str = ",".join(map(str, ranks))
+        ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
-
+    logger.info("init_pp,local_rank=%d,rank=%d,group_ranks=%s",
+                get_world_group().local_rank,
+                get_world_group().rank, ranks_str)
     _PP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
 
@@ -1044,18 +1070,24 @@ def ensure_model_parallel_initialized(
         get_world_group().device_group)
     tp_pp_size = tensor_model_parallel_size * \
         pipeline_model_parallel_size
-    is_tp_pp_node = get_world_group().rank < tp_pp_size
+    rank = get_world_group().rank
+    logger.info("init parallel,tp=%d,pp=%d,sp=%d,rank=%d",
+                tensor_model_parallel_size, pipeline_model_parallel_size,
+                sequence_parallel_size, rank)
+    is_tp_pp_node = rank < tp_pp_size
     if is_tp_pp_node and not model_parallel_is_initialized():
+        logger.info("rank:%d tp_pp start initializing", rank)
         initialize_model_parallel(tensor_model_parallel_size,
                                   pipeline_model_parallel_size,
                                   sequence_parallel_size, backend)
-        logger.info("rank:%d tp_pp initialized", get_world_group().rank)
+        logger.info("rank:%d tp_pp initialized", rank)
     if not sequence_parallel_is_initialized(sequence_parallel_size, is_tp_pp_node,
-                                            get_world_group().rank):
+                                            rank):
+        logger.info("rank:%d sp start initializing", rank)
         initialize_sequence_parallel(tensor_model_parallel_size,
                                      pipeline_model_parallel_size,
                                      sequence_parallel_size, backend)
-        logger.info("rank:%d sp initialized", get_world_group().rank)
+        logger.info("rank:%d sp initialized", rank)
         return
     if is_tp_pp_node:
         assert (

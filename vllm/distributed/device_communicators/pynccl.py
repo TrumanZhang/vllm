@@ -71,9 +71,9 @@ class PyNcclCommunicator:
         tensor = torch.ByteTensor(list(self.unique_id.internal))
         ranks = dist.get_process_group_ranks(group)
         # arg `src` in `broadcast` is the global rank
-        logger.info("pynccl,test_broadcast,world_size:%d,rank:%d",self.world_size,self.rank)
+        logger.info("pynccl,test_broadcast,world_size=%d,rank=%d",self.world_size,self.rank)
         dist.broadcast(tensor, src=ranks[0], group=group)
-        logger.info("end pynccl,test_broadcast,world_size:%d,rank:%d",self.world_size,self.rank)
+        logger.info("end pynccl,test_broadcast,world_size=%d,rank=%d",self.world_size,self.rank)
         byte_list = tensor.tolist()
         for i, byte in enumerate(byte_list):
             self.unique_id.internal[i] = byte
@@ -91,12 +91,12 @@ class PyNcclCommunicator:
             self.comm: ncclComm_t = self.nccl.ncclCommInitRank(
                 self.world_size, self.unique_id, self.rank)
             self.stream = torch.cuda.Stream()
-            logger.info("pynccl,test_all_reduce,world_size:%d,rank:%d",self.world_size,self.rank)
+            logger.info("pynccl,test_all_reduce,world_size=%d,rank=%d",self.world_size,self.rank)
             # A small all_reduce for warmup.
             data = torch.zeros(1, device=device)
             self.all_reduce(data)
             self.stream.synchronize()
-            logger.info("pynccl,end test_all_reduce,world_size:%d,rank:%d",self.world_size,self.rank)
+            logger.info("pynccl,end test_all_reduce,world_size=%d,rank=%d",self.world_size,self.rank)
             del data
 
         # by default it is disabled, e.g. in profiling models and prefill phase.
