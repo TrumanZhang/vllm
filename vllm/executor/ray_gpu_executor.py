@@ -191,8 +191,9 @@ class RayGPUExecutor(DistributedGPUExecutor):
         VLLM_INSTANCE_ID = get_vllm_instance_id()
 
         number = len(worker_node_and_gpu_ids)
-        logger.warning("vllm_instance_id:%s,the number of pair<worker,gpu_id>"
-                       ":%d,gpus:%s", VLLM_INSTANCE_ID, number, gpus)
+        length = len(self.workers)+1
+        logger.warning("workers:%dvllm_instance_id:%s,the number of pair<worker,gpu_id>"
+                       ":%d,gpus:%s", length, VLLM_INSTANCE_ID, number, gpus)
 
         # Set environment variables for the driver and workers.
         all_args_to_update_environment_variables = [({
