@@ -204,11 +204,10 @@ class GroupCoordinator:
             ShmRingBufferIO)
         self.shm_broadcaster: Optional[ShmRingBufferIO] = None
 
-        if self.world_size > 1 :
-            # if is_in_the_same_node(self.cpu_group):
+        if self.world_size > 1 and is_in_the_same_node(self.cpu_group):
             logger.info("init groupCoordinator--shm_broastcaster")
-            # self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
-            #     self.cpu_group, 1 << 22, 6)
+            self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
+                self.cpu_group, 1 << 22, 6)
         logger.info("end init groupCoordinator--shm_broastcaster")
 
     @property
