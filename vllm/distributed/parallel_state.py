@@ -881,10 +881,6 @@ def init_distributed_environment(
         "world_size=%d rank=%d local_rank=%d "
         "distributed_init_method=%s backend=%s", world_size, rank, local_rank,
         distributed_init_method, backend)
-    logger.info(
-        "world_size=%d rank=%d local_rank=%d "
-        "distributed_init_method=%s backend=%s", world_size, rank, local_rank,
-        distributed_init_method, backend)
     if not torch.distributed.is_initialized():
         assert distributed_init_method is not None, (
             "distributed_init_method must be provided when initializing "
@@ -907,9 +903,11 @@ def init_distributed_environment(
             local_rank = rank
     global _WORLD
     if _WORLD is None:
+        logger.info("####################################")
         ranks = list(range(torch.distributed.get_world_size()))
         _WORLD = init_world_group(ranks, local_rank, backend)
     else:
+        logger.info("@@@@@@@@@@@@@@@@@@@")
         assert _WORLD.world_size == torch.distributed.get_world_size(), (
             "world group already initialized with a different world size")
     logger.info("world initialized:%d", _WORLD.rank)
