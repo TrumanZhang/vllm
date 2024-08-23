@@ -924,14 +924,13 @@ def initialize_sequence_parallel(
     world_size: int = torch.distributed.get_world_size()
     tp_pp_world_size: int = world_size - sequence_parallel_size
 
-
     sp_world_size: int = sequence_parallel_size
     # Build the sequence-parallel groups.
     # Each tp or sp rank should have a sequence parallel group
     num_sequence_parallel_groups: int = tp_pp_world_size
     global _SP
-    assert _SP is None, ("sequence parallel groups are already initialized")
-    _SP = [None] * num_sequence_parallel_groups
+    if _SP is None:
+        _SP = [None] * num_sequence_parallel_groups
     group_ranks = []
     ranks_str = ""
     for i in range(num_sequence_parallel_groups):
@@ -1072,8 +1071,7 @@ def ensure_model_parallel_initialized(
                                   pipeline_model_parallel_size,
                                   sequence_parallel_size, backend)
         logger.info("rank:%d tp_pp initialized", rank)
-    if not sequence_parallel_is_initialized(sequence_parallel_size, is_tp_pp_node,
-                                            rank):
+    if sequence_parallel_size > 0:
         logger.info("rank:%d sp start initializing", rank)
         initialize_sequence_parallel(sequence_parallel_size, backend)
         logger.info("rank:%d sp initialized", rank)
