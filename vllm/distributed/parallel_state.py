@@ -797,9 +797,11 @@ def init_model_parallel_group(group_ranks: List[List[int]], local_rank: int,
         group_ranks=group_ranks,
         local_rank=local_rank,
         torch_distributed_backend=backend,
-        use_pynccl=True,
-        use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,
+        use_pynccl=False,
+        use_custom_allreduce=False,
     )
+        # use_pynccl=Flae,
+        # use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,     
 
 
 _TP: Optional[GroupCoordinator] = None
