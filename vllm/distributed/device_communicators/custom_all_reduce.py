@@ -167,8 +167,8 @@ class CustomAllreduce:
         physical_device_ids_str = ",".join(map(str, physical_device_ids))
         logger.info("custoAllreduce,test_allgather,world_size=%d,rank=%d,"
                     "device_index=%d,physical_device_id=%d,visible_devices=%s,"
-                    "gather_physical_device_ids=%s", world_size, rank, device_str,
-                    device.index, physical_device_id, physical_device_ids_str)
+                    "gather_physical_device_ids=%s", world_size, rank, device.index,
+                    physical_device_id, device_str, physical_device_ids_str)
         # test nvlink first, this will filter out most of the cases
         # where custom allreduce is not supported
         # this checks hardware and driver support for NVLink
