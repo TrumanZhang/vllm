@@ -916,8 +916,6 @@ def init_distributed_environment(
 
 
 def initialize_sequence_parallel(
-    tensor_model_parallel_size: int = 1,
-    pipeline_model_parallel_size: int = 1,
     sequence_parallel_size: int = 0,
     backend: Optional[str] = None,
 ) -> None:
@@ -926,12 +924,6 @@ def initialize_sequence_parallel(
     world_size: int = torch.distributed.get_world_size()
     tp_pp_world_size: int = world_size - sequence_parallel_size
 
-    if (tp_pp_world_size !=
-            tensor_model_parallel_size * pipeline_model_parallel_size):
-        raise RuntimeError(
-            f"world_size ({tp_pp_world_size}) is not equal to "
-            f"tensor_model_parallel_size ({tensor_model_parallel_size}) x "
-            f"pipeline_model_parallel_size ({pipeline_model_parallel_size})")
 
     sp_world_size: int = sequence_parallel_size
     # Build the sequence-parallel groups.
@@ -1083,9 +1075,7 @@ def ensure_model_parallel_initialized(
     if not sequence_parallel_is_initialized(sequence_parallel_size, is_tp_pp_node,
                                             rank):
         logger.info("rank:%d sp start initializing", rank)
-        initialize_sequence_parallel(tensor_model_parallel_size,
-                                     pipeline_model_parallel_size,
-                                     sequence_parallel_size, backend)
+        initialize_sequence_parallel(sequence_parallel_size, backend)
         logger.info("rank:%d sp initialized", rank)
         return
     if is_tp_pp_node:
@@ -1111,25 +1101,25 @@ def sequence_parallel_is_initialized(sequence_parallel_size: int,
     """Check if tensor and pipeline parallel groups are initialized."""
     if sequence_parallel_size == 0:
         return True
-    if is_tp_pp_node:
-        sp_is_initialized = True
-        if _SP is None:
-            sp_is_initialized = False
-        else:
-            sp = _SP[rank]
-            if sp is None:
-                sp_is_initialized = False
-    else:
-        sp_is_initialized = True
-        if sequence_parallel_size != 0:
-            sp_is_initialized = True
-            if _SP is None:
-                sp_is_initialized = False
-            else:
-                for item in _SP:
-                    if item is None:
-                        sp_is_initialized = False
-                        break
+    # if is_tp_pp_node:
+    sp_is_initialized = True
+    if _SP is None:
+        sp_is_initialized = False
+    #     else:
+    #         sp = _SP[rank]
+    #         if sp is None:
+    #             sp_is_initialized = False
+    # else:
+    #     sp_is_initialized = True
+    #     if sequence_parallel_size != 0:
+    #         sp_is_initialized = True
+    #         if _SP is None:
+    #             sp_is_initialized = False
+    #         else:
+    #             for item in _SP:
+    #                 if item is None:
+    #                     sp_is_initialized = False
+    #                     break
     return sp_is_initialized
 
 
