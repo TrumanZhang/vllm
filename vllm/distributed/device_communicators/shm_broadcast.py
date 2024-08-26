@@ -281,15 +281,23 @@ class ShmRingBufferIO:
         buffer: ShmRingBuffer
         if group_rank == writer_rank:
             buffer = ShmRingBuffer(n_reader, max_chunk_bytes, max_chunks)
+            logger.info("share memory bufferio test broastcast write,rank=%d,"
+                        " n_reader=%d",group_rank,n_reader)
             dist.broadcast_object_list([buffer],
                                        src=global_ranks[writer_rank],
                                        group=pg)
+            logger.info("share memory bufferio end test broastcast write,rank=%d,"
+                        " n_reader=%d",group_rank,n_reader)
             return ShmRingBufferIO(buffer, -1)
         else:
             recv = [None]
+            logger.info("share memory bufferio test broastcast read,rank=%d,"
+                        " n_reader=%d",group_rank,n_reader)
             dist.broadcast_object_list(recv,
                                        src=global_ranks[writer_rank],
                                        group=pg)
+            logger.info("share memory bufferio end test broastcast read,rank=%d,"
+                        " n_reader=%d",group_rank,n_reader)
             buffer = recv[0]  # type: ignore
             rest_ranks = [r for r in ranks_inside_group if r != writer_rank]
             return ShmRingBufferIO(buffer, rest_ranks.index(group_rank))
