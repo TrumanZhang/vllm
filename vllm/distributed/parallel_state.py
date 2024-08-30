@@ -827,19 +827,20 @@ def get_pp_group() -> GroupCoordinator:
 # kept for backward compatibility
 get_pipeline_model_parallel_group = get_pp_group
 
-_SP: Optional[List[Optional[GroupCoordinator]]] = None
+#_SP: Optional[List[GroupCoordinator]] = None
+_SP:Optional[GroupCoordinator] = None
 
 
 def get_sp_group(rank: int) -> GroupCoordinator:
     assert _SP is not None, (
-        "pipeline model parallel groups are not initialized")
-    assert rank < len(_SP) and rank >= 0, ("rank is out of range of sp groups")
-    assert _SP[rank] is not None, (
-        f"sequence parallel group of rank {rank} is not initialized")
-    sp = _SP[rank]
-    assert sp is not None, (
-        f"sequence parallel group of rank {rank} is not initialized")
-    return sp
+         "pipeline model parallel groups are not initialized")
+    # assert rank < len(_SP) and rank >= 0, ("rank is out of range of sp groups")
+    # assert _SP[rank] is not None, (
+    #     f"sequence parallel group of rank {rank} is not initialized")
+    # sp = _SP[rank]
+    # assert sp is not None, (
+    #     f"sequence parallel group of rank {rank} is not initialized")
+    return _SP
 
 
 @contextmanager
@@ -929,8 +930,9 @@ def initialize_sequence_parallel(
     # Each tp or sp rank should have a sequence parallel group
     num_sequence_parallel_groups: int = tp_pp_world_size
     global _SP
-    if _SP is None:
-        _SP = [None] * num_sequence_parallel_groups
+    assert _SP is None,"sp is not none"
+    # if _SP is None:
+    #     _SP = [None] * num_sequence_parallel_groups
     group_ranks = []
     ranks_str = ""
     for i in range(num_sequence_parallel_groups):
@@ -949,7 +951,7 @@ def initialize_sequence_parallel(
             rank_str = ",".join(map(str, ranks))
             logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
                         local_rank, get_world_group().rank, index, rank_str)
-            _SP[index] = init_model_parallel_group(
+            _SP= init_model_parallel_group(
                 [ranks], local_rank, backend)
         index += 1
 
