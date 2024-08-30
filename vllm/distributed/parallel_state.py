@@ -143,10 +143,13 @@ class GroupCoordinator:
         for ranks in group_ranks:
             device_group = torch.distributed.new_group(
                 ranks, backend=torch_distributed_backend)
+            logger.info("init_groupCoordinator created device_group")
             # a group with `gloo` backend, to allow direct coordination between
             # processes through the CPU.
             cpu_group = torch.distributed.new_group(ranks, backend="gloo")
+            logger.info("init_groupCoordinator created cpu_group")
             if self.rank in ranks:
+                logger.info("init_groupCoordinator init ranks,world_size.....")
                 self.ranks = ranks
                 self.world_size = len(ranks)
                 self.rank_in_group = ranks.index(self.rank)
@@ -155,7 +158,7 @@ class GroupCoordinator:
 
         assert self.cpu_group is not None
         assert self.device_group is not None
-
+        logger.info("init_groupCoordinator created group")
         if torch.cuda.is_available():
             self.device = torch.device(f"cuda:{local_rank}")
         else:
@@ -827,20 +830,19 @@ def get_pp_group() -> GroupCoordinator:
 # kept for backward compatibility
 get_pipeline_model_parallel_group = get_pp_group
 
-#_SP: Optional[List[GroupCoordinator]] = None
-_SP:Optional[GroupCoordinator] = None
+_SP: Optional[List[Optional[GroupCoordinator]]] = None
 
 
 def get_sp_group(rank: int) -> GroupCoordinator:
     assert _SP is not None, (
-         "pipeline model parallel groups are not initialized")
-    # assert rank < len(_SP) and rank >= 0, ("rank is out of range of sp groups")
-    # assert _SP[rank] is not None, (
-    #     f"sequence parallel group of rank {rank} is not initialized")
-    # sp = _SP[rank]
-    # assert sp is not None, (
-    #     f"sequence parallel group of rank {rank} is not initialized")
-    return _SP
+        "pipeline model parallel groups are not initialized")
+    assert rank < len(_SP) and rank >= 0, ("rank is out of range of sp groups")
+    assert _SP[rank] is not None, (
+        f"sequence parallel group of rank {rank} is not initialized")
+    sp = _SP[rank]
+    assert sp is not None, (
+        f"sequence parallel group of rank {rank} is not initialized")
+    return sp
 
 
 @contextmanager
@@ -930,9 +932,8 @@ def initialize_sequence_parallel(
     # Each tp or sp rank should have a sequence parallel group
     num_sequence_parallel_groups: int = tp_pp_world_size
     global _SP
-    assert _SP is None,"sp is not none"
-    # if _SP is None:
-    #     _SP = [None] * num_sequence_parallel_groups
+    if _SP is None:
+        _SP = [None] * num_sequence_parallel_groups
     group_ranks = []
     ranks_str = ""
     for i in range(num_sequence_parallel_groups):
@@ -951,7 +952,7 @@ def initialize_sequence_parallel(
             rank_str = ",".join(map(str, ranks))
             logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
                         local_rank, get_world_group().rank, index, rank_str)
-            _SP= init_model_parallel_group(
+            _SP[index] = init_model_parallel_group(
                 [ranks], local_rank, backend)
         index += 1
 
