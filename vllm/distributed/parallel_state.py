@@ -139,7 +139,7 @@ class GroupCoordinator:
         self.local_rank = local_rank
         self.device_group = None
         self.cpu_group = None
-
+        logger.info("init_groupCoordinator enter")
         for ranks in group_ranks:
             device_group = torch.distributed.new_group(
                 ranks, backend=torch_distributed_backend)
@@ -798,7 +798,7 @@ def init_model_parallel_group(group_ranks: List[List[int]], local_rank: int,
         local_rank=local_rank,
         torch_distributed_backend=backend,
         use_pynccl=True,
-        use_custom_allreduce=False,
+        use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,
     )
         # use_pynccl=Flae,
         # use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,     
