@@ -803,8 +803,8 @@ def init_model_parallel_group(group_ranks: List[List[int]], local_rank: int,
         use_pynccl=True,
         use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,
     )
-        # use_pynccl=Flae,
-        # use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,     
+    # use_pynccl=Flae,
+    # use_custom_allreduce=_ENABLE_CUSTOM_ALL_REDUCE,
 
 
 _TP: Optional[GroupCoordinator] = None
@@ -1022,6 +1022,10 @@ def initialize_model_parallel(
         rank_str = ",".join(map(str, ranks))
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
+    ranks=list(range(tp_pp_world_size,world_size))
+    rank_str = ",".join(map(str, ranks))
+    ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
+    group_ranks.append(ranks)
     logger.info("init_tp,local_rank=%d,rank=%d,group_ranks=%s",
                 get_world_group().local_rank,
                 get_world_group().rank, ranks_str)
@@ -1042,9 +1046,14 @@ def initialize_model_parallel(
         rank_str = ",".join(map(str, ranks))
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
+    ranks=list(range(tp_pp_world_size,world_size))
+    rank_str = ",".join(map(str, ranks))
+    ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
+    group_ranks.append(ranks)
     logger.info("init_pp,local_rank=%d,rank=%d,group_ranks=%s",
                 get_world_group().local_rank,
                 get_world_group().rank, ranks_str)
+    
     _PP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
 
@@ -1067,8 +1076,7 @@ def ensure_model_parallel_initialized(
     logger.info("init parallel,tp=%d,pp=%d,sp=%d,rank=%d",
                 tensor_model_parallel_size, pipeline_model_parallel_size,
                 sequence_parallel_size, rank)
-    is_tp_pp_node = rank < tp_pp_size
-    if is_tp_pp_node and not model_parallel_is_initialized():
+    if not model_parallel_is_initialized():
         logger.info("rank:%d tp_pp start initializing", rank)
         initialize_model_parallel(tensor_model_parallel_size,
                                   pipeline_model_parallel_size,
@@ -1079,17 +1087,17 @@ def ensure_model_parallel_initialized(
         initialize_sequence_parallel(sequence_parallel_size, backend)
         logger.info("rank:%d sp initialized", rank)
         return
-    if is_tp_pp_node:
-        assert (
-            get_tensor_model_parallel_world_size() == tensor_model_parallel_size
-        ), ("tensor parallel group already initialized, but of unexpected size: "
-            f"{get_tensor_model_parallel_world_size()=} vs. "
-            f"{tensor_model_parallel_size=}")
-        pp_world_size = get_pp_group().world_size
-        assert (pp_world_size == pipeline_model_parallel_size), (
-            "pipeline parallel group already initialized, but of unexpected size: "
-            f"{pp_world_size=} vs. "
-            f"{pipeline_model_parallel_size=}")
+
+    assert (
+        get_tensor_model_parallel_world_size() == tensor_model_parallel_size
+    ), ("tensor parallel group already initialized, but of unexpected size: "
+        f"{get_tensor_model_parallel_world_size()=} vs. "
+        f"{tensor_model_parallel_size=}")
+    pp_world_size = get_pp_group().world_size
+    assert (pp_world_size == pipeline_model_parallel_size), (
+        "pipeline parallel group already initialized, but of unexpected size: "
+        f"{pp_world_size=} vs. "
+        f"{pipeline_model_parallel_size=}")
 
 
 def model_parallel_is_initialized():
