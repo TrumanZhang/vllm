@@ -942,18 +942,28 @@ def initialize_sequence_parallel(
         rank_str = ",".join(map(str, ranks))
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
+    group_ranks_remain=[]
+    for i in range(num_sequence_parallel_groups):
+        ranks=[]
+        for j in range(num_sequence_parallel_groups):
+            if j!=i:
+                ranks.append(j)
+        group_ranks_remain.append(ranks)
     logger.info("init_sp,local_rank=%d,rank=%d,group_ranks=%s",
                 get_world_group().local_rank,
                 get_world_group().rank, ranks_str)
     index = 0
     for ranks in group_ranks:
+        local_rank = get_world_group().local_rank
         if get_world_group().rank in ranks:
-            local_rank = get_world_group().local_rank
             rank_str = ",".join(map(str, ranks))
             logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
                         local_rank, get_world_group().rank, index, rank_str)
             _SP[index] = init_model_parallel_group(
                 [ranks], local_rank, backend)
+        else:
+            ranks_remain=group_ranks_remain[index]
+            init_model_parallel_group([ranks_remain],local_rank,backend)
         index += 1
 
 
