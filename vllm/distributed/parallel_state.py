@@ -934,36 +934,42 @@ def initialize_sequence_parallel(
     global _SP
     if _SP is None:
         _SP = [None] * num_sequence_parallel_groups
+
     group_ranks = []
     ranks_str = ""
     for i in range(num_sequence_parallel_groups):
         ranks = [i] + list(
-            range(tp_pp_world_size, tp_pp_world_size + sp_world_size))
+            range(tp_pp_world_size, world_size))
         rank_str = ",".join(map(str, ranks))
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
-    group_ranks_remain=[]
+
+    group_ranks_remain = []
     for i in range(num_sequence_parallel_groups):
-        ranks=[]
+        ranks = []
         for j in range(num_sequence_parallel_groups):
-            if j!=i:
+            if j != i:
                 ranks.append(j)
         group_ranks_remain.append(ranks)
     logger.info("init_sp,local_rank=%d,rank=%d,group_ranks=%s",
                 get_world_group().local_rank,
                 get_world_group().rank, ranks_str)
+
     index = 0
     for ranks in group_ranks:
         local_rank = get_world_group().local_rank
-        if get_world_group().rank in ranks:
-            rank_str = ",".join(map(str, ranks))
-            logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
-                        local_rank, get_world_group().rank, index, rank_str)
-            _SP[index] = init_model_parallel_group(
-                [ranks], local_rank, backend)
-        else:
-            ranks_remain=group_ranks_remain[index]
-            init_model_parallel_group([ranks_remain],local_rank,backend)
+        if not sequence_parallel_is_initialized(
+            sequence_parallel_size=sequence_parallel_size,
+            test_sequence_i=True,rank=index):
+            if get_world_group().rank in ranks:
+                rank_str = ",".join(map(str, ranks))
+                logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
+                            local_rank, get_world_group().rank, index, rank_str)
+                _SP[index] = init_model_parallel_group(
+                    [ranks], local_rank, backend)
+            else:
+                ranks_remain = group_ranks_remain[index]
+                init_model_parallel_group([ranks_remain], local_rank, backend)
         index += 1
 
 
@@ -1032,10 +1038,13 @@ def initialize_model_parallel(
         rank_str = ",".join(map(str, ranks))
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
-    ranks=list(range(tp_pp_world_size,world_size))
+
+    ranks = list(range(tp_pp_world_size, world_size))
     rank_str = ",".join(map(str, ranks))
     ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
-    group_ranks.append(ranks)
+    if len(ranks) > 0:
+        group_ranks.append(ranks)
+
     logger.info("init_tp,local_rank=%d,rank=%d,group_ranks=%s",
                 get_world_group().local_rank,
                 get_world_group().rank, ranks_str)
@@ -1056,14 +1065,17 @@ def initialize_model_parallel(
         rank_str = ",".join(map(str, ranks))
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
-    ranks=list(range(tp_pp_world_size,world_size))
+
+    ranks = list(range(tp_pp_world_size, world_size))
     rank_str = ",".join(map(str, ranks))
     ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
-    group_ranks.append(ranks)
+    if len(ranks) > 0:
+        group_ranks.append(ranks)
+
     logger.info("init_pp,local_rank=%d,rank=%d,group_ranks=%s",
                 get_world_group().local_rank,
                 get_world_group().rank, ranks_str)
-    
+
     _PP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
 
@@ -1092,7 +1104,8 @@ def ensure_model_parallel_initialized(
                                   pipeline_model_parallel_size,
                                   sequence_parallel_size, backend)
         logger.info("rank:%d tp_pp initialized", rank)
-    if sequence_parallel_size > 0:
+    if not sequence_parallel_is_initialized(
+            sequence_parallel_size=sequence_parallel_size):
         logger.info("rank:%d sp start initializing", rank)
         initialize_sequence_parallel(sequence_parallel_size, backend)
         logger.info("rank:%d sp initialized", rank)
@@ -1116,7 +1129,7 @@ def model_parallel_is_initialized():
 
 
 def sequence_parallel_is_initialized(sequence_parallel_size: int,
-                                     is_tp_pp_node: bool, rank: int):
+                                     test_sequence_i: bool = False, rank: int = 0):
     """Check if tensor and pipeline parallel groups are initialized."""
     if sequence_parallel_size == 0:
         return True
@@ -1124,6 +1137,10 @@ def sequence_parallel_is_initialized(sequence_parallel_size: int,
     sp_is_initialized = True
     if _SP is None:
         sp_is_initialized = False
+    else:
+        if test_sequence_i:
+            if _SP[rank] is None:
+                sp_is_initialized = False
     #     else:
     #         sp = _SP[rank]
     #         if sp is None:
@@ -1188,7 +1205,7 @@ def get_sequence_parallel_rank():
     """Return my rank for the tensor model parallel group."""
     global_rank = get_world_group().rank_in_group
     if global_rank >= get_tp_group().world_size:
-        return get_sp_group(0).rank_in_group - 1
+        return get_sp_group(0).rank_in_group
     else:
         return -1
 
