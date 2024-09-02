@@ -815,9 +815,12 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                                                   dtype=torch.int,
                                                   device=self.device)
             seq_lens_remote_tensor_list.append(seq_lens_remote_tensor)
-
-            max_block_table_len_remote = max(
-                len(block_table) for block_table in block_tables_remote[i])
+            length=[len(block_table) for block_table in block_tables_remote[i]]
+            if len(length)==0:
+                max_block_table_len_remote=0
+            else:
+                max_block_table_len_remote = max(
+                )
             block_tables_remote[i] = make_tensor_with_pad(
                 block_tables_remote[i],
                 max_len=max_block_table_len_remote,
