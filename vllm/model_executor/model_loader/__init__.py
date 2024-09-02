@@ -1,4 +1,4 @@
-from typing import Optional,bool
+from typing import Optional
 
 from torch import nn
 

@@ -7,7 +7,7 @@ import json
 import math
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generator, List, Optional, Tuple, Type,bool
+from typing import Any, Dict, Generator, List, Optional, Tuple, Type
 
 import huggingface_hub
 import numpy as np
