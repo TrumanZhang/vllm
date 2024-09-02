@@ -959,8 +959,8 @@ def initialize_sequence_parallel(
     for ranks in group_ranks:
         local_rank = get_world_group().local_rank
         if not sequence_parallel_is_initialized(
-            sequence_parallel_size=sequence_parallel_size,
-            test_sequence_i=True,rank=index):
+                sequence_parallel_size=sequence_parallel_size,
+                test_sequence_i=True, rank=index):
             if get_world_group().rank in ranks:
                 rank_str = ",".join(map(str, ranks))
                 logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
@@ -969,7 +969,8 @@ def initialize_sequence_parallel(
                     [ranks], local_rank, backend)
             else:
                 ranks_remain = group_ranks_remain[index]
-                init_model_parallel_group([ranks_remain], local_rank, backend)
+                _SP[index] = init_model_parallel_group(
+                    [ranks_remain], local_rank, backend)
         index += 1
 
 
