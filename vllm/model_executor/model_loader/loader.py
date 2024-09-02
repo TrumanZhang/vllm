@@ -7,7 +7,7 @@ import json
 import math
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generator, List, Optional, Tuple, Type
+from typing import Any, Dict, Generator, List, Optional, Tuple, Type,bool
 
 import huggingface_hub
 import numpy as np
@@ -121,7 +121,8 @@ class BaseModelLoader(ABC):
                    vision_language_config: Optional[VisionLanguageConfig],
                    parallel_config: ParallelConfig,
                    scheduler_config: SchedulerConfig,
-                   cache_config: CacheConfig) -> nn.Module:
+                   cache_config: CacheConfig,
+                   is_sp_worker:Optional[bool]) -> nn.Module:
         """Load a model with the given configurations."""
         ...
 
@@ -261,28 +262,31 @@ class DefaultModelLoader(BaseModelLoader):
                    vision_language_config: Optional[VisionLanguageConfig],
                    parallel_config: ParallelConfig,
                    scheduler_config: SchedulerConfig,
-                   cache_config: CacheConfig) -> nn.Module:
+                   cache_config: CacheConfig,
+                   is_sp_worker:Optional[bool]) -> nn.Module:
+        logger.info("$$$$$$$$$$$$$$$$$$ defaultmodelloader")
         with set_default_torch_dtype(model_config.dtype):
             with torch.device(device_config.device):
                 model = _initialize_model(model_config, self.load_config,
                                           lora_config, vision_language_config,
                                           cache_config)
-            model.load_weights(
-                self._get_weights_iterator(model_config.model,
-                                           model_config.revision,
-                                           fall_back_to_pt=getattr(
-                                               model,
-                                               "fall_back_to_pt_during_load",
-                                               True)), )
+            if not is_sp_worker:
+                model.load_weights(
+                    self._get_weights_iterator(model_config.model,
+                                            model_config.revision,
+                                            fall_back_to_pt=getattr(
+                                                model,
+                                                "fall_back_to_pt_during_load",
+                                                True)), )
 
-            for _, module in model.named_modules():
-                quant_method = getattr(module, "quant_method", None)
-                if quant_method is not None:
-                    quant_method.process_weights_after_loading(module)
-                # FIXME: Remove this after Mixtral is updated
-                # to use quant_method.
-                if hasattr(module, "process_weights_after_loading"):
-                    module.process_weights_after_loading()
+                for _, module in model.named_modules():
+                    quant_method = getattr(module, "quant_method", None)
+                    if quant_method is not None:
+                        quant_method.process_weights_after_loading(module)
+                    # FIXME: Remove this after Mixtral is updated
+                    # to use quant_method.
+                    if hasattr(module, "process_weights_after_loading"):
+                        module.process_weights_after_loading()
         return model.eval()
 
 
@@ -301,7 +305,8 @@ class DummyModelLoader(BaseModelLoader):
                    vision_language_config: Optional[VisionLanguageConfig],
                    parallel_config: ParallelConfig,
                    scheduler_config: SchedulerConfig,
-                   cache_config: CacheConfig) -> nn.Module:
+                   cache_config: CacheConfig,
+                   is_sp_worker:Optional[bool]) -> nn.Module:
         with set_default_torch_dtype(model_config.dtype):
             with torch.device(device_config.device):
                 model = _initialize_model(model_config, self.load_config,
@@ -395,7 +400,8 @@ class TensorizerLoader(BaseModelLoader):
                    vision_language_config: Optional[VisionLanguageConfig],
                    parallel_config: ParallelConfig,
                    scheduler_config: SchedulerConfig,
-                   cache_config: CacheConfig) -> nn.Module:
+                   cache_config: CacheConfig,
+                   is_sp_worker:Optional[bool]) -> nn.Module:
         self._verify_config(model_config, parallel_config)
 
         if parallel_config.tensor_parallel_size > 1:
@@ -497,7 +503,8 @@ class ShardedStateLoader(BaseModelLoader):
                    vision_language_config: Optional[VisionLanguageConfig],
                    parallel_config: ParallelConfig,
                    scheduler_config: SchedulerConfig,
-                   cache_config: CacheConfig) -> nn.Module:
+                   cache_config: CacheConfig,
+                   is_sp_worker:Optional[bool]) -> nn.Module:
         from safetensors.torch import safe_open
 
         from vllm.distributed import get_tensor_model_parallel_rank
@@ -807,7 +814,8 @@ class BitsAndBytesModelLoader(BaseModelLoader):
                    vision_language_config: Optional[VisionLanguageConfig],
                    parallel_config: ParallelConfig,
                    scheduler_config: SchedulerConfig,
-                   cache_config: CacheConfig) -> nn.Module:
+                   cache_config: CacheConfig,
+                   is_sp_worker:Optional[bool]) -> nn.Module:
         with set_default_torch_dtype(model_config.dtype):
             with torch.device(device_config.device):
                 model = _initialize_model(model_config, self.load_config,

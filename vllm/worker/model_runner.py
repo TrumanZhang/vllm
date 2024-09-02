@@ -234,6 +234,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 parallel_config=self.parallel_config,
                 scheduler_config=self.scheduler_config,
                 cache_config=self.cache_config,
+                is_sp_worker=self.is_sp_worker,
             )
 
         self.model_memory_usage = m.consumed_memory

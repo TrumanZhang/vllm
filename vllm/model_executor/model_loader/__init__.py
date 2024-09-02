@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional,bool
 
 from torch import nn
 
@@ -16,7 +16,8 @@ def get_model(*, model_config: ModelConfig, load_config: LoadConfig,
               scheduler_config: SchedulerConfig,
               lora_config: Optional[LoRAConfig],
               vision_language_config: Optional[VisionLanguageConfig],
-              cache_config: CacheConfig) -> nn.Module:
+              cache_config: CacheConfig,
+              is_sp_worker:Optional[bool]) -> nn.Module:
     loader = get_model_loader(load_config)
     return loader.load_model(model_config=model_config,
                              device_config=device_config,
@@ -24,7 +25,8 @@ def get_model(*, model_config: ModelConfig, load_config: LoadConfig,
                              vision_language_config=vision_language_config,
                              parallel_config=parallel_config,
                              scheduler_config=scheduler_config,
-                             cache_config=cache_config)
+                             cache_config=cache_config,
+                             is_sp_worker=is_sp_worker)
 
 
 __all__ = [
