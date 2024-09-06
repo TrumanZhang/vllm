@@ -236,9 +236,6 @@ class Worker(LocalOrDistributedWorkerBase):
         if self.is_sp_worker:
             self.cache_config.num_gpu_blocks = num_remote_gpu_blocks
             self.cache_config.num_cpu_blocks = 0
-        else:
-            if self.cache_config.num_cpu_blocks<0:
-                self.cache_config.num_cpu_blocks=-self.cache_config.num_cpu_blocks
 
         self._init_cache_engine()
         self._warm_up_model()

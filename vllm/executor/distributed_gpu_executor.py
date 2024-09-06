@@ -69,6 +69,7 @@ class DistributedGPUExecutor(GPUExecutor):
 
         self.cache_config.num_gpu_blocks = num_gpu_blocks
         self.cache_config.num_cpu_blocks = num_cpu_blocks
+        self.cache_config.num_remote_gpu_blocks=num_remote_gpu_blocks
 
         self._run_workers("initialize_cache",
                           num_gpu_blocks=num_gpu_blocks,

@@ -43,11 +43,6 @@ class CacheEngine:
         
         self.in_sp_worker = in_sp_worker
 
-        if self.num_cpu_blocks < 0:
-            if self.in_sp_worker:
-                self.num_cpu_blocks = 0
-            else:
-                self.num_cpu_blocks=-self.num_cpu_blocks
         if cache_config.cache_dtype == "auto":
             self.dtype = model_config.dtype
         else:
