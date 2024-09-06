@@ -983,6 +983,7 @@ def initialize_sequence_parallel(
     # Get world size and rank. Ensure some consistencies.
     assert torch.distributed.is_initialized()
     world_size: int = torch.distributed.get_world_size()
+    global _SP
     assert _SP is None, ("sequence parallel group is already initialized")
     group_ranks = []
     ranks_str = ""
