@@ -8,6 +8,7 @@ from torch.nn.parameter import Parameter
 from vllm.distributed import (divide, get_sp_group,
                               get_tensor_model_parallel_rank,
                               get_tensor_model_parallel_world_size,
+                              get_world_size,
                               split_tensor_along_last_dim,
                               tensor_model_parallel_all_gather,
                               tensor_model_parallel_all_reduce)
@@ -675,12 +676,7 @@ class SequenceParallelLinearForBroastcast:
     def forward(self, input_):
         # Set up backprop all-reduce.
 
-        if self.tp_rank != -1:
-            output = input_
-            get_sp_group(self.tp_rank).broadcast(input_, 0)
-        else:
-            output = get_sp_group(self.from_rank).broadcast(0)
-
+        output = get_sp_group(self.tp_rank).all_gather(input_,0)
         return output
 
     def extra_repr(self) -> str:
@@ -698,7 +694,8 @@ class SequenceParallelLinearForGather:
             self.from_rank = -1
         else:
             self.from_rank = from_rank
-
+        self.tp_size=get_tensor_model_parallel_world_size()
+        self.world_size=get_world_size()
     def forward(self, input_, input_2, input_3):
         # Set up backprop all-reduce.
 
@@ -706,9 +703,23 @@ class SequenceParallelLinearForGather:
         # gather(input_,dst,dim),dim is untest.
         # output need be the shape
         # [num_seqs, num_heads, num_sequece_block, head_size]
-        output = get_sp_group(self.tp_rank).gather_extension(input_, 0, -2)
-        output2 = get_sp_group(self.tp_rank).gather_extension(input_2, 0, -1)
-        output3 = get_sp_group(self.tp_rank).gather_extension(input_3, 0, -1)
+        size_=input_.size(-1)
+        size_2=input_2.size(-1)
+        size_3=input_3.size(-1)
+        output = get_sp_group(self.tp_rank).all_gather(input_, -1)
+        output2 = get_sp_group(self.tp_rank).all_gather(input_2, -1)
+        output3 = get_sp_group(self.tp_rank).all_gather(input_3, -1)
+        if self.tp_rank>=0:
+            filter=[self.tp_rank]+list(range(self.tp_size,self.world_size))
+            output_list=[output.split(size_,-1)]
+            output2_list=[output.split(size_2,-1)]
+            output3_list=[output.split(size_3,-1)]
+            output_list_new=[output_list[i] for i in range(self.world_size) if i in filter]
+            output2_list_new=[output2_list[i] for i in range(self.world_size) if i in filter]
+            output3_list_new=[output3_list[i] for i in range(self.world_size) if i in filter]
+            output=torch.stack(output_list_new,dim=-2)
+            output2=torch.stack(output2_list_new,dim=-1)
+            output3=torch.stack(output3_list_new,dim=-1)
 
         return output, output2, output3
 

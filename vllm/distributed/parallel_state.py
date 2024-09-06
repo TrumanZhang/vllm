@@ -335,6 +335,7 @@ class GroupCoordinator:
                                                input_size[dim], ) +
                                               input_size[dim + 1:])
         return output_tensor
+        
 
     def gather(self,
                input_: torch.Tensor,
@@ -830,19 +831,19 @@ def get_pp_group() -> GroupCoordinator:
 # kept for backward compatibility
 get_pipeline_model_parallel_group = get_pp_group
 
-_SP: Optional[List[Optional[GroupCoordinator]]] = None
+_SP: Optional[GroupCoordinator] = None
 
 
 def get_sp_group(rank: int) -> GroupCoordinator:
     assert _SP is not None, (
         "pipeline model parallel groups are not initialized")
-    assert rank < len(_SP) and rank >= 0, ("rank is out of range of sp groups")
-    assert _SP[rank] is not None, (
-        f"sequence parallel group of rank {rank} is not initialized")
-    sp = _SP[rank]
-    assert sp is not None, (
-        f"sequence parallel group of rank {rank} is not initialized")
-    return sp
+    # assert rank < len(_SP) and rank >= 0, ("rank is out of range of sp groups")
+    # assert _SP[rank] is not None, (
+    #     f"sequence parallel group of rank {rank} is not initialized")
+    # sp = _SP[rank]
+    # assert sp is not None, (
+    #     f"sequence parallel group of rank {rank} is not initialized")
+    return _SP
 
 
 @contextmanager
@@ -918,6 +919,63 @@ def init_distributed_environment(
     logger.info("world initialized:%d", _WORLD.rank)
 
 
+# def initialize_sequence_parallel(
+#     sequence_parallel_size: int = 0,
+#     backend: Optional[str] = None,
+# ) -> None:
+#     # Get world size and rank. Ensure some consistencies.
+#     assert torch.distributed.is_initialized()
+#     world_size: int = torch.distributed.get_world_size()
+#     tp_pp_world_size: int = world_size - sequence_parallel_size
+
+#     sp_world_size: int = sequence_parallel_size
+#     # Build the sequence-parallel groups.
+#     # Each tp or sp rank should have a sequence parallel group
+#     num_sequence_parallel_groups: int = tp_pp_world_size
+#     global _SP
+#     if _SP is None:
+#         _SP = [None] * num_sequence_parallel_groups
+
+#     group_ranks = []
+#     ranks_str = ""
+#     for i in range(num_sequence_parallel_groups):
+#         ranks = [i] + list(
+#             range(tp_pp_world_size, world_size))
+#         rank_str = ",".join(map(str, ranks))
+#         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
+#         group_ranks.append(ranks)
+
+#     group_ranks_remain = []
+#     for i in range(num_sequence_parallel_groups):
+#         ranks = []
+#         for j in range(num_sequence_parallel_groups):
+#             if j != i:
+#                 ranks.append(j)
+#         group_ranks_remain.append(ranks)
+#     logger.info("init_sp,local_rank=%d,rank=%d,group_ranks=%s",
+#                 get_world_group().local_rank,
+#                 get_world_group().rank, ranks_str)
+
+#     index = 0
+#     for ranks in group_ranks:
+#         local_rank = get_world_group().local_rank
+#         if get_world_group().rank in ranks:
+#             rank_str = ",".join(map(str, ranks))
+#             logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
+#                         local_rank, get_world_group().rank, index, rank_str)
+#             if not sequence_parallel_is_initialized(
+#                     sequence_parallel_size=sequence_parallel_size,
+#                     test_sequence_i=True, rank=index):
+#                 _SP[index] = init_model_parallel_group(
+#                     [ranks], local_rank, backend)
+#         else:
+#             ranks_remain = group_ranks_remain[index]
+#             if not sequence_parallel_is_initialized(
+#                     sequence_parallel_size=sequence_parallel_size,
+#                     test_sequence_i=True, rank=index):
+#                 _SP[index] = init_model_parallel_group(
+#                     [ranks_remain], local_rank, backend)
+#         index += 1
 def initialize_sequence_parallel(
     sequence_parallel_size: int = 0,
     backend: Optional[str] = None,
@@ -925,56 +983,21 @@ def initialize_sequence_parallel(
     # Get world size and rank. Ensure some consistencies.
     assert torch.distributed.is_initialized()
     world_size: int = torch.distributed.get_world_size()
-    tp_pp_world_size: int = world_size - sequence_parallel_size
-
-    sp_world_size: int = sequence_parallel_size
-    # Build the sequence-parallel groups.
-    # Each tp or sp rank should have a sequence parallel group
-    num_sequence_parallel_groups: int = tp_pp_world_size
-    global _SP
-    if _SP is None:
-        _SP = [None] * num_sequence_parallel_groups
-
+    assert _SP is None, ("sequence parallel group is already initialized")
     group_ranks = []
     ranks_str = ""
-    for i in range(num_sequence_parallel_groups):
-        ranks = [i] + list(
-            range(tp_pp_world_size, world_size))
+    for i in range(1):
+        ranks = list(range(world_size))
         rank_str = ",".join(map(str, ranks))
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
 
-    group_ranks_remain = []
-    for i in range(num_sequence_parallel_groups):
-        ranks = []
-        for j in range(num_sequence_parallel_groups):
-            if j != i:
-                ranks.append(j)
-        group_ranks_remain.append(ranks)
     logger.info("init_sp,local_rank=%d,rank=%d,group_ranks=%s",
                 get_world_group().local_rank,
                 get_world_group().rank, ranks_str)
 
-    index = 0
-    for ranks in group_ranks:
-        local_rank = get_world_group().local_rank
-        if get_world_group().rank in ranks:
-            rank_str = ",".join(map(str, ranks))
-            logger.info("init_sp_group,local_rank=%d,rank=%d,sp_index=%d,ranks=%s",
-                        local_rank, get_world_group().rank, index, rank_str)
-            if not sequence_parallel_is_initialized(
-                    sequence_parallel_size=sequence_parallel_size,
-                    test_sequence_i=True, rank=index):
-                _SP[index] = init_model_parallel_group(
-                    [ranks], local_rank, backend)
-        else:
-            ranks_remain = group_ranks_remain[index]
-            if not sequence_parallel_is_initialized(
-                    sequence_parallel_size=sequence_parallel_size,
-                    test_sequence_i=True, rank=index):
-                _SP[index] = init_model_parallel_group(
-                    [ranks_remain], local_rank, backend)
-        index += 1
+    _SP = init_model_parallel_group(
+        group_ranks, get_world_group().local_rank, backend)
 
 
 def initialize_model_parallel(
@@ -1195,6 +1218,9 @@ def get_tensor_model_parallel_world_size():
     """Return world size for the tensor model parallel group."""
     return get_tp_group().world_size
 
+def get_world_size():
+    """Return world size for the tensor model parallel group."""
+    return get_world_group().world_size
 
 def get_tensor_model_parallel_rank():
     global_rank = get_world_group().rank_in_group
