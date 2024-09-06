@@ -315,7 +315,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
     def _prepare_model_input_tensors(
         self,
         seq_group_metadata_list: List[SequenceGroupMetadata],
-        is_profile_run:Optional[bool],
+        is_profile_run: Optional[bool],
     ) -> TModelInputForGPU:
         """Helper method to prepare the model input based on a given sequence
         group. Prepares metadata needed for the base model forward pass but not
@@ -405,7 +405,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         # paged_kv_last_page_len is the length of the last page of each request
         paged_kv_last_page_len: List[int] = []
         if is_profile_run is None:
-            is_profile_run=False
+            is_profile_run = False
 
         if len(seq_group_metadata_list) == 0:
             return self._model_input_cls()
@@ -724,7 +724,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                     q_index = q_index + 1
                 # Prepare the remote metadata
                 old_index = old_index + 1
-                #todo generate remote_meta for profile_run
+                # todo generate remote_meta for profile_run
                 if is_profile_run:
                     pass
 
@@ -815,9 +815,10 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                                                   dtype=torch.int,
                                                   device=self.device)
             seq_lens_remote_tensor_list.append(seq_lens_remote_tensor)
-            length=[len(block_table) for block_table in block_tables_remote[i]]
-            if len(length)==0:
-                max_block_table_len_remote=0
+            length = [len(block_table)
+                      for block_table in block_tables_remote[i]]
+            if len(length) == 0:
+                max_block_table_len_remote = 0
             else:
                 max_block_table_len_remote = max(
                 )
@@ -1037,7 +1038,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         # Run the model with the dummy inputs.
         num_layers = self.model_config.get_num_layers(self.parallel_config)
         kv_caches = [None] * num_layers
-        model_input = self.prepare_model_input(seqs,True)
+        model_input = self.prepare_model_input(seqs, True)
         self.execute_model(model_input, kv_caches)
         torch.cuda.synchronize()
         return
@@ -1335,7 +1336,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         If cuda graph is required, this API automatically pads inputs.
         """
         model_input = self._prepare_model_input_tensors(
-            seq_group_metadata_list,is_profile_run)
+            seq_group_metadata_list, is_profile_run)
         seq_lens = reshape_list(model_input.seq_lens,
                                 model_input.output_reshape_index)
         query_lens = reshape_list(model_input.query_lens,
@@ -1359,6 +1360,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
     ) -> Optional[List[SamplerOutput]]:
         if num_steps > 1:
             raise ValueError("num_steps > 1 is not supported in ModelRunner")
+        logger.info("cache_engine is completed its work,enter executing model")
 
         if self.lora_config:
             assert model_input.lora_requests is not None
@@ -1415,7 +1417,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
             attn_metadata=model_input.attn_metadata,
             **multi_modal_kwargs,
         )
-
+        logger.info("executing model end")
         hidden_states_reshape = torch.empty_like(hidden_states,
                                                  dtype=hidden_states.dtype,
                                                  device=hidden_states.device)
@@ -1425,7 +1427,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                 hidden_states_reshape[indexes[i]] = hidden_states[i]
         else:
             hidden_states_reshape = hidden_states
-
+        logger.info("executing model end,reshape result end")
         # Compute the logits.
         logits = self.model.compute_logits(hidden_states_reshape,
                                            model_input.sampling_metadata)
