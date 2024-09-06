@@ -43,7 +43,8 @@ class XFormersBackend(AttentionBackend):
         result = PagedAttention.get_kv_cache_shape(num_blocks, block_size,
                                                    num_kv_heads, head_size)
         if tp_size is not None and tp_size > 1:
-            return tp_size, result
+            result=[tp_size]+list(result)
+            return tuple(result)
         else:
             return result
 
