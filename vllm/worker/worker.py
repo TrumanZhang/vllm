@@ -359,7 +359,7 @@ class Worker(LocalOrDistributedWorkerBase):
     @torch.inference_mode()
     def execute_worker(self, worker_input: WorkerInput) -> None:
         # Issue cache operations.
-        if self.is_sp_worker:
+        if not self.is_sp_worker:
             if (worker_input.blocks_to_swap_in is not None
                     and worker_input.blocks_to_swap_in.numel() > 0):
                 self.cache_engine.swap_in(worker_input.blocks_to_swap_in)
