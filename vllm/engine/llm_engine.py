@@ -356,7 +356,8 @@ class LLMEngine:
         self.cache_config.num_gpu_blocks = num_gpu_blocks
         self.cache_config.num_cpu_blocks = num_cpu_blocks
         self.cache_config.num_remote_gpu_blocks = num_remote_gpu_blocks
-
+        logger.info("initialize_kv_caches,gpu=%d,cpu=%d,remote=%d",
+                    num_gpu_blocks,-num_cpu_blocks,num_remote_gpu_blocks)
         self.model_executor.initialize_cache(num_gpu_blocks, num_cpu_blocks,
                                              num_remote_gpu_blocks)
 

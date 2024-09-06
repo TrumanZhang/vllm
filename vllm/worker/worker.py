@@ -262,7 +262,7 @@ class Worker(LocalOrDistributedWorkerBase):
     def do_metadata_sp_broadcast(self) -> bool:
         if not self.model_config.enable_long_sequence:
             return False
-        return self.parallel_config.sequence_parallel_size > 1
+        return self.parallel_config.sequence_parallel_size > 0
 
     @property
     def kv_cache(self) -> Optional[List[torch.Tensor]]:
@@ -359,20 +359,22 @@ class Worker(LocalOrDistributedWorkerBase):
     @torch.inference_mode()
     def execute_worker(self, worker_input: WorkerInput) -> None:
         # Issue cache operations.
-        if (worker_input.blocks_to_swap_in is not None
-                and worker_input.blocks_to_swap_in.numel() > 0):
-            self.cache_engine.swap_in(worker_input.blocks_to_swap_in)
-        if (worker_input.blocks_to_swap_out is not None
-                and worker_input.blocks_to_swap_out.numel() > 0):
-            self.cache_engine.swap_out(worker_input.blocks_to_swap_out)
-        if (worker_input.blocks_to_copy is not None
-                and worker_input.blocks_to_copy.numel() > 0):
-            self.cache_engine.copy(worker_input.blocks_to_copy)
+        if self.is_sp_worker:
+            if (worker_input.blocks_to_swap_in is not None
+                    and worker_input.blocks_to_swap_in.numel() > 0):
+                self.cache_engine.swap_in(worker_input.blocks_to_swap_in)
+            if (worker_input.blocks_to_swap_out is not None
+                    and worker_input.blocks_to_swap_out.numel() > 0):
+                self.cache_engine.swap_out(worker_input.blocks_to_swap_out)
+            if (worker_input.blocks_to_copy is not None
+                    and worker_input.blocks_to_copy.numel() > 0):
+                self.cache_engine.copy(worker_input.blocks_to_copy)
         # Note sequence parallel requires master workers (in sp and tp)
         # to first copy blocks their chunk memories, and then migrate
         # the chunk to the tgt sp worker
         enable_mig = worker_input.superblock_to_migrate is not None
         enable_mig = enable_mig and self.model_config.enable_long_sequence
+        enable_mig = False
         if (enable_mig
                 and worker_input.superblock_to_migrate.numel() > 0):
             chunk_to_migrate = worker_input.superblock_to_migrate.tolist()

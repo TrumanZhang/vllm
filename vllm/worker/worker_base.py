@@ -277,45 +277,53 @@ class LocalOrDistributedWorkerBase(WorkerBase):
                     execute_model_req.seq_group_metadata_list,False))
             num_steps = execute_model_req.num_steps
 
-            # broadcast inputs for all workers in its tp_group.
-            if self.do_metadata_broadcast:
+            # # broadcast inputs for all workers in its tp_group.
+            # if self.do_metadata_broadcast:
+            #     broadcast_data = worker_input.as_broadcastable_tensor_dict()
+            #     broadcast_data.update(
+            #         model_input.as_broadcastable_tensor_dict())
+            #     broadcast_data["num_steps"] = num_steps
+            #     broadcast_tensor_dict(broadcast_data, src=0)
+
+            # broadcast inputs for all workers in its sp_group.
+            if self.do_metadata_sp_broadcast:
+                broadcast_data = worker_input.as_broadcastable_tensor_dict()
+                broadcast_data.update(
+                    model_input.as_broadcastable_tensor_dict())
+                broadcast_data["num_steps"] = num_steps
+                broadcast_sp_tensor_dict(broadcast_data, src=0)
+            elif self.do_metadata_broadcast:
                 broadcast_data = worker_input.as_broadcastable_tensor_dict()
                 broadcast_data.update(
                     model_input.as_broadcastable_tensor_dict())
                 broadcast_data["num_steps"] = num_steps
                 broadcast_tensor_dict(broadcast_data, src=0)
 
-            # broadcast inputs for all workers in its sp_group.
-            if self.do_metadata_sp_broadcast:
-                broadcast_data = worker_input.as_broadcastable_sp_tensor_dict()
-                broadcast_data.update(
-                    model_input.as_broadcastable_tensor_dict())
-                broadcast_data["num_steps"] = num_steps
-                broadcast_sp_tensor_dict(broadcast_data, src=0)
-
-        elif self.is_sp_worker:
-            assert self.do_metadata_sp_broadcast
-            broadcast_data = broadcast_sp_tensor_dict(src=0)
-            if not broadcast_data:
-                return None
-            num_steps = broadcast_data.pop("num_steps")
-            worker_input = WorkerInput.from_broadcasted_sp_tensor_dict(
-                broadcast_data)
-            model_input = (
-                self.model_runner.
-                make_model_input_from_broadcasted_tensor_dict(broadcast_data))
+        # elif self.is_sp_worker:
+        #     assert self.do_metadata_sp_broadcast
+        #     broadcast_data = broadcast_sp_tensor_dict(src=0)
+        #     if not broadcast_data:
+        #         return None
+        #     num_steps = broadcast_data.pop("num_steps")
+        #     worker_input = WorkerInput.from_broadcasted_sp_tensor_dict(
+        #         broadcast_data)
+        #     model_input = (
+        #         self.model_runner.
+        #         make_model_input_from_broadcasted_tensor_dict(broadcast_data))
 
         else:
-            assert self.do_metadata_broadcast
-            broadcast_data = broadcast_tensor_dict(src=0)
+            if self.do_metadata_sp_broadcast:
+                broadcast_data = broadcast_sp_tensor_dict(src=0)
+            else:
+                broadcast_data = broadcast_tensor_dict(src=0)
             if not broadcast_data:
-                return None
+                    return None
             num_steps = broadcast_data.pop("num_steps")
             worker_input = WorkerInput.from_broadcasted_tensor_dict(
-                broadcast_data)
+                    broadcast_data)
             model_input = (
-                self.model_runner.
-                make_model_input_from_broadcasted_tensor_dict(broadcast_data))
+                    self.model_runner.
+                    make_model_input_from_broadcasted_tensor_dict(broadcast_data))
 
         self.execute_worker(worker_input)
 

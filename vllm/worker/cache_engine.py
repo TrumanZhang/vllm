@@ -43,6 +43,7 @@ class CacheEngine:
         
         self.in_sp_worker = in_sp_worker
 
+
         if cache_config.cache_dtype == "auto":
             self.dtype = model_config.dtype
         else:
