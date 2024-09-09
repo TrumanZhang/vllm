@@ -222,7 +222,7 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
             max_remote_decode_seq_len=[],
             block_tables_remote=[],
             q_remote_distribution=[],
-            use_cuda_graph=self.use_cuda_graph,
+            use_cuda_graph=False,
         )
         return self._cached_decode_metadata
 
@@ -257,7 +257,7 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
             max_remote_decode_seq_len=self.max_remote_decode_seq_len,
             block_tables_remote=self.block_tables_remote,
             q_remote_distribution=self.q_remote_distribution,
-            use_cuda_graph=self.use_cuda_graph,
+            use_cuda_graph=False,
         )
         return self._cached_remote_metadata
 
