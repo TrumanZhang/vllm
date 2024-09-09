@@ -330,8 +330,13 @@ class LocalOrDistributedWorkerBase(WorkerBase):
         # If there is no input, we don't need to execute the model.
         if worker_input.num_seq_groups == 0:
             return []
-
-        return self.model_runner.execute_model(model_input, self.kv_cache,
+        
+        if self.is_sp_worker:
+            self.model_runner.execute_model(model_input, self.kv_cache,
+                                               num_steps)
+            return []
+        else:
+            return self.model_runner.execute_model(model_input, self.kv_cache,
                                                num_steps)
 
 
