@@ -90,6 +90,7 @@ class ModelInputForGPU(ModelRunnerInputBase):
         tensor_dict = {
             "input_tokens": self.input_tokens,
             "input_positions": self.input_positions,
+            
             "lora_requests": self.lora_requests,
             "lora_mapping": self.lora_mapping,
             "multi_modal_kwargs": self.multi_modal_kwargs,
@@ -243,8 +244,9 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             sp_worker=1
         else:
             sp_worker=0
-        logger.info("Loading model weights took %.4f GB,model name:%s,is_sp_worker:%d",
-                    self.model_memory_usage / float(2**30),self.model_config.model,sp_worker)
+        logger.info("Loading model weights took %.4f GB,model name:%s,is_sp_worker:"
+                    "%d,model_name:%s",self.model_memory_usage / float(2**30),
+                    self.model_config.model,sp_worker,self.model._get_name)
 
         if self.lora_config:
             assert supports_lora(self.model), "Model does not support LoRA"
@@ -1426,12 +1428,12 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         hidden_states_reshape = torch.empty_like(hidden_states,
                                                  dtype=hidden_states.dtype,
                                                  device=hidden_states.device)
-        indexes = model_input.output_reshape_index
-        if indexes is not None and self.model_config.enable_long_sequence:
-            for i in range(len(indexes)):
-                hidden_states_reshape[indexes[i]] = hidden_states[i]
-        else:
-            hidden_states_reshape = hidden_states
+        # indexes = model_input.output_reshape_index
+        # if indexes is not None and self.model_config.enable_long_sequence:
+        #     for i in range(len(indexes)):
+        #         hidden_states_reshape[indexes[i]] = hidden_states[i]
+        # else:
+        hidden_states_reshape = hidden_states
         logger.info("executing model end,reshape result end")
         # Compute the logits.
         logits = self.model.compute_logits(hidden_states_reshape,
