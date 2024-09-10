@@ -236,10 +236,15 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 cache_config=self.cache_config,
                 is_sp_worker=self.is_sp_worker,
             )
+        
 
         self.model_memory_usage = m.consumed_memory
-        logger.info("Loading model weights took %.4f GB",
-                    self.model_memory_usage / float(2**30))
+        if self.is_sp_worker:
+            sp_worker=1
+        else:
+            sp_worker=0
+        logger.info("Loading model weights took %.4f GB,model name:%s,is_sp_worker:%d",
+                    self.model_memory_usage / float(2**30),self.model_config.model,sp_worker)
 
         if self.lora_config:
             assert supports_lora(self.model), "Model does not support LoRA"
