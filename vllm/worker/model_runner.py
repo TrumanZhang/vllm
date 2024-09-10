@@ -1436,7 +1436,8 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         hidden_states_reshape = hidden_states
         logger.info("executing model end,reshape result end")
         # Compute the logits.
-        logits = self.model.compute_logits(hidden_states_reshape,
+        if not self.is_sp_worker:
+            logits = self.model.compute_logits(hidden_states_reshape,
                                            model_input.sampling_metadata)
 
         # Only perform sampling in the driver worker.
