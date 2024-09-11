@@ -189,7 +189,7 @@ class Worker(LocalOrDistributedWorkerBase):
         # Execute a forward pass with dummy inputs to profile the memory usage
         # of the model.
         if self.is_sp_worker:
-            return -1, 1
+            return 1, -1
         
         self.model_runner.profile_run()
 
