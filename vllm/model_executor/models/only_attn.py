@@ -100,12 +100,12 @@ class OnlyAttention(nn.Module):
         attn_metadata: AttentionMetadata,
     ) -> None:
         q=torch.empty([attn_metadata.num_long_decode_tokens,self.num_heads,self.head_dim],device='cuda')
-        gather=self.broastcastlayer(q)
+        gather=self.broastcastlayer.forward(q)
         length=gather.size(0)
         q,_ = gather.split([self.tp_size,length-self.tp_size],dim=0)
         attn_to_reduce, exp_sum_to_reduce, max_logits_to_reduce = self.attn(
             q, kv_cache, attn_metadata, self.sp_rank)
-        self.gatherlayer(attn_to_reduce[0], exp_sum_to_reduce[0],
+        self.gatherlayer.forward(attn_to_reduce[0], exp_sum_to_reduce[0],
                          max_logits_to_reduce[0])
 
 
