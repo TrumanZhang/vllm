@@ -911,7 +911,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         if length > 0:
             migrate_block = self.migrate_list[0]
             self.migrate_list.pop(0)
-            num_blocks = int(self.block_migrate_size / self.block_size)
+            num_blocks = int(self.block_migrate_size // self.block_size)
             to_blocks = self.remote_allocator.allocate(num_blocks)
             remote_rank = to_blocks[0].remote_rank
             block_table = self.block_tables[migrate_block.seq_id]
@@ -936,8 +936,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
     def format_kvcache_migrate_blocks(
             self, blocks_to_migrate: List[Tuple[int, int, int]],
             blocks_to_copy: List[Tuple[int, int]]) -> None:
-        if len(blocks_to_migrate)==0:
-            return 
-        dest_blocks = self.gpu_allocator.get_migrate_blocks()
-        for from_info, dest_block in zip(blocks_to_migrate, dest_blocks):
-            blocks_to_copy.append((from_info[0], dest_block))
+        if len(blocks_to_migrate)!=0:
+            dest_blocks = self.gpu_allocator.get_migrate_blocks()
+            for from_info, dest_block in zip(blocks_to_migrate, dest_blocks):
+                blocks_to_copy.append((from_info[0], dest_block))
