@@ -389,7 +389,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                                                 self.num_remote_blocks,
                                                 self.remote_allocator_number,
                                                 SelectionPolicy.ONLYAPPEND)
-        migrate_size = int(self.block_migrate_size/self.block_size)
+        migrate_size = int(self.block_migrate_size//self.block_size)
         self.enable_long_sequence = enable_long_sequence
         if enable_long_sequence:
             self.blocks_for_migrate = migrate_size
@@ -890,7 +890,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         is_running = seq.status == SequenceStatus.RUNNING
         maybe_to_migrate = len >= self.block_migrate_threshold
         migrate_set = set(self.migrate_list)
-        if maybe_to_migrate and remain == 0 and is_running:
+        if maybe_to_migrate and remain > 0 and is_running:
             block_table = self.block_tables[seq.seq_id]
             start = self.block_migrate_start
             while start < len:
@@ -936,7 +936,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
     def format_kvcache_migrate_blocks(
             self, blocks_to_migrate: List[Tuple[int, int, int]],
             blocks_to_copy: List[Tuple[int, int]]) -> None:
-        if blocks_to_migrate is not None and len(blocks_to_migrate)>0:
+        if len(blocks_to_migrate)>0:
             dest_blocks = self.gpu_allocator.get_migrate_blocks()
             for from_info, dest_block in zip(blocks_to_migrate, dest_blocks):
                 blocks_to_copy.append((from_info[0], dest_block))
