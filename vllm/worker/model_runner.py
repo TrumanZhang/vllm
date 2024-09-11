@@ -1418,15 +1418,20 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
             model_executable = self.model
 
         multi_modal_kwargs = model_input.multi_modal_kwargs or {}
-        hidden_states = model_executable(
-            input_ids=model_input.input_tokens,
-            positions=model_input.input_positions,
-            kv_caches=kv_caches,
-            attn_metadata=model_input.attn_metadata,
-            **multi_modal_kwargs,
-        )
-        logger.info("executing model end")
-        hidden_states_reshape = torch.empty_like(hidden_states,
+        if self.is_sp_worker:
+            hidden_states=model_executable(
+                kv_caches=kv_caches,
+                attn_metadata=model_input.attn_metadata)
+        else:
+            hidden_states = model_executable(
+                input_ids=model_input.input_tokens,
+                positions=model_input.input_positions,
+                kv_caches=kv_caches,
+                attn_metadata=model_input.attn_metadata,
+                **multi_modal_kwargs,
+            )
+            logger.info("executing model end")
+            hidden_states_reshape = torch.empty_like(hidden_states,
                                                  dtype=hidden_states.dtype,
                                                  device=hidden_states.device)
         # indexes = model_input.output_reshape_index
@@ -1434,10 +1439,10 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         #     for i in range(len(indexes)):
         #         hidden_states_reshape[indexes[i]] = hidden_states[i]
         # else:
-        hidden_states_reshape = hidden_states
-        logger.info("executing model end,reshape result end")
+            hidden_states_reshape = hidden_states
+            logger.info("executing model end,reshape result end")
         # Compute the logits.
-        logits = self.model.compute_logits(hidden_states_reshape,
+            logits = self.model.compute_logits(hidden_states_reshape,
                                            model_input.sampling_metadata)
 
         # Only perform sampling in the driver worker.
