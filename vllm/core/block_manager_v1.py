@@ -894,12 +894,14 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             block_table = self.block_tables[seq.seq_id]
             start = self.block_migrate_start
             while start < len:
-                block = block_table[start]
-                if block.remote_rank == 0:
-                    migrate_set.update([
-                        SequenceSuperBlock(seq.seq_id, self.block_migrate_size,
-                                           start)
-                    ])
+                if start+self.block_migrate_size<len:
+                    index=int(start//self.block_size)
+                    block = block_table[index]
+                    if block.remote_rank == 0:
+                        migrate_set.update([
+                            SequenceSuperBlock(seq.seq_id, self.block_migrate_size,
+                                            start)
+                        ])
                 start = start + self.block_migrate_size
         self.migrate_list = list(migrate_set)
 
@@ -913,11 +915,11 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             to_blocks = self.remote_allocator.allocate(num_blocks)
             remote_rank = to_blocks[0].remote_rank
             block_table = self.block_tables[migrate_block.seq_id]
-            start = migrate_block.start
-            end = migrate_block.start + migrate_block.block_size
-            for index in range(start, end):
+            start_index = int(migrate_block.start//self.block_size)
+            end_index = int((migrate_block.start + migrate_block.block_size)//self.block_size)
+            for index in range(start_index, end_index):
                 self.gpu_allocator.free(block_table[index])
-                to_block = to_blocks[index - migrate_block.start]
+                to_block = to_blocks[index - start_index]
                 mapping_item = (block_table[index].block_number, remote_rank,
                                 to_block.block_number)
                 mapping.append(mapping_item)
