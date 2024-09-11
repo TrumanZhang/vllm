@@ -188,6 +188,9 @@ class Worker(LocalOrDistributedWorkerBase):
 
         # Execute a forward pass with dummy inputs to profile the memory usage
         # of the model.
+        if self.is_sp_worker:
+            return -1, 1
+        
         self.model_runner.profile_run()
 
         # Calculate the number of blocks that can be allocated with the
@@ -209,10 +212,6 @@ class Worker(LocalOrDistributedWorkerBase):
                              cache_block_size)
         num_gpu_blocks = max(num_gpu_blocks, 0)
         num_cpu_blocks = max(num_cpu_blocks, 0)
-        if self.is_sp_worker:
-            num_cpu_blocks = -1 if num_cpu_blocks == 0 else -num_cpu_blocks
-            num_gpu_blocks = int(num_gpu_blocks //
-                                 self.parallel_config.tensor_parallel_size)
 
         if self.model_runner.lora_manager:
             self.model_runner.remove_all_loras()

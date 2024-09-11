@@ -111,8 +111,8 @@ class ModelRegistry:
                     model_arch, _ROCM_PARTIALLY_SUPPORTED_MODELS[model_arch])
 
         module_name, model_cls_name = _MODELS[model_arch]
-        logger.info("###########################"
-                    "model_arch:%s,module_name:%s",model_arch,module_name)
+        # logger.info("###########################"
+        #             "model_arch:%s,module_name:%s",model_arch,module_name)
         module = importlib.import_module(
             f"vllm.model_executor.models.{module_name}")
         return getattr(module, model_cls_name, None)

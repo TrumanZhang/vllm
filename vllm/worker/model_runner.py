@@ -1046,9 +1046,9 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         num_layers = self.model_config.get_num_layers(self.parallel_config)
         kv_caches = [None] * num_layers
         model_input = self.prepare_model_input(seqs, True)
-        if not self.is_sp_worker:
-            self.execute_model(model_input, kv_caches)
-            torch.cuda.synchronize()
+        
+        self.execute_model(model_input, kv_caches)
+        torch.cuda.synchronize()
         return
 
     def remove_all_loras(self):
