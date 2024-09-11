@@ -40,16 +40,16 @@ class DistributedGPUExecutor(GPUExecutor):
         # Since we use a shared centralized controller, we take the minimum
         # number of blocks across all workers to make sure all the memory
         # operators can be applied to all workers.
-
-        num_gpu_blocks = min(b[0] for b in num_blocks)
-        num_cpu_blocks = min(b[1] for b in num_blocks)
-
         num_remote_blocks = [
             num_block for num_block in num_blocks if num_block[1] < 0
         ]
-
+        num_local_blocks=[
+            num_block for num_block in num_blocks if num_block[1] >=0
+        ]
+        num_gpu_blocks = min(b[0] for b in num_local_blocks)
+        num_cpu_blocks = min(b[1] for b in num_local_blocks)
         if len(num_remote_blocks) != 0:
-            num_remote_gpu_blocks = min(b[0] for b in num_remote_blocks)
+            num_remote_gpu_blocks =min(b[0] for b in num_remote_blocks)
         else:
             num_remote_gpu_blocks = 0
         return num_gpu_blocks, num_cpu_blocks, num_remote_gpu_blocks
