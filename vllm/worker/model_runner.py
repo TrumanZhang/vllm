@@ -1368,7 +1368,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
     ) -> Optional[List[SamplerOutput]]:
         if num_steps > 1:
             raise ValueError("num_steps > 1 is not supported in ModelRunner")
-        logger.info("cache_engine is completed its work,enter executing model")
+        #logger.info("cache_engine is completed its work,enter executing model")
 
         if self.lora_config:
             assert model_input.lora_requests is not None
@@ -1430,7 +1430,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                 attn_metadata=model_input.attn_metadata,
                 **multi_modal_kwargs,
             )
-            logger.info("executing model end")
+            #logger.info("executing model end")
             hidden_states_reshape = torch.empty_like(hidden_states,
                                                  dtype=hidden_states.dtype,
                                                  device=hidden_states.device)
@@ -1440,7 +1440,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         #         hidden_states_reshape[indexes[i]] = hidden_states[i]
         # else:
             hidden_states_reshape = hidden_states
-            logger.info("executing model end,reshape result end")
+            #logger.info("executing model end,reshape result end")
         # Compute the logits.
             logits = self.model.compute_logits(hidden_states_reshape,
                                            model_input.sampling_metadata)
