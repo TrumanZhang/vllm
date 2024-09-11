@@ -160,7 +160,7 @@ class AttentionModel(nn.Module):
         kv_caches: List[torch.Tensor],
         attn_metadata: AttentionMetadata,
     ) -> torch.Tensor:
-        for i in range(len(self.num_hidden_layers)):
+        for i in range(self.num_hidden_layers):
             layer = self.layer
             layer(
                 kv_caches[i],
