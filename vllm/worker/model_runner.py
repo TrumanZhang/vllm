@@ -1046,8 +1046,9 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         num_layers = self.model_config.get_num_layers(self.parallel_config)
         kv_caches = [None] * num_layers
         model_input = self.prepare_model_input(seqs, True)
-        self.execute_model(model_input, kv_caches)
-        torch.cuda.synchronize()
+        if not self.is_sp_worker:
+            self.execute_model(model_input, kv_caches)
+            torch.cuda.synchronize()
         return
 
     def remove_all_loras(self):
@@ -1436,8 +1437,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         hidden_states_reshape = hidden_states
         logger.info("executing model end,reshape result end")
         # Compute the logits.
-        if not self.is_sp_worker:
-            logits = self.model.compute_logits(hidden_states_reshape,
+        logits = self.model.compute_logits(hidden_states_reshape,
                                            model_input.sampling_metadata)
 
         # Only perform sampling in the driver worker.
