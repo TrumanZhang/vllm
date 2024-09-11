@@ -833,15 +833,13 @@ class Scheduler:
                      len(running_scheduled.swapped_out))
         blocks_to_migrate: List[Tuple[int, int, int]] = []
         blocks_to_copy_for_migration: List[Tuple[int, int]] = []
-        superblock_to_migrate = []
+        superblock_to_migrate = None
         if self.scheduler_config.enable_long_sequence:
             self.block_manager.get_kvcache_migrate_block(blocks_to_migrate)
             self.block_manager.format_kvcache_migrate_blocks(
                 blocks_to_migrate, blocks_to_copy_for_migration)
             superblock_size = len(blocks_to_migrate)
-            if superblock_size==0:
-                superblock_to_migrate=None
-            else:
+            if superblock_size!=0:
                 superblock_to_migrate = (blocks_to_migrate[0][2] %
                                      superblock_size,
                                      blocks_to_migrate[0][1])

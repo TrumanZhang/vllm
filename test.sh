@@ -6,7 +6,7 @@ export VLLM_TRACE_FUNCTION=1
 outputlen=(6000 1500 1500 2000 1500 2000 1500 1000 1500)
 numseqs=(1024 1024 16 128 512 128 512 512 512)
 numprompts=(4000 2000 4000 4000 2000 2000 4000 4000 2000)
-parallelsize=(2 2 4 4 4 4 8 8 8)
+parallelsize=(4 2 4 4 4 4 8 8 8)
 for i in {0..0}
 do
         for j in {1..1}
@@ -23,7 +23,7 @@ do
                                 --tensor-parallel-size ${parallelsize[$i]} --sequence-parallel-size 2 \
                                 --result /home/work02/work02.new/llm/vllm_sp/data/result.csv --enable-long-sequence 1\
                                 --max-model-len 8192 --max-num-batched-tokens 1024\
-                                --block-migrate-threshold 8192 --block-migrate-size 1024 --block-migrate-start 8192
+                                --block-migrate-threshold 4096 --block-migrate-size 1024 --block-migrate-start 2048
                                 echo "parallel size:${parallelsize[$i]},num prompts:${numprompts[$j]},num batched seqs:${numseqs[$k]},\
                                 max output length:${outputlen[$l]}, sequence-parallel-size:2, max-model-len:8192, max-num-batched-tokens:1024"
                         done

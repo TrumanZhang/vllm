@@ -936,7 +936,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
     def format_kvcache_migrate_blocks(
             self, blocks_to_migrate: List[Tuple[int, int, int]],
             blocks_to_copy: List[Tuple[int, int]]) -> None:
-        if len(blocks_to_migrate)!=0:
+        if blocks_to_migrate is not None and len(blocks_to_migrate)>0:
             dest_blocks = self.gpu_allocator.get_migrate_blocks()
             for from_info, dest_block in zip(blocks_to_migrate, dest_blocks):
                 blocks_to_copy.append((from_info[0], dest_block))
