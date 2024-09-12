@@ -827,8 +827,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             if len(length) == 0:
                 max_block_table_len_remote = 0
             else:
-                max_block_table_len_remote = max(
-                )
+                max_block_table_len_remote = max(length)
             block_tables_remote[i] = make_tensor_with_pad(
                 block_tables_remote[i],
                 max_len=max_block_table_len_remote,
