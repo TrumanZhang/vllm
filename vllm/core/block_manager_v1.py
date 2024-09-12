@@ -938,5 +938,6 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             blocks_to_copy: List[Tuple[int, int]]) -> None:
         if len(blocks_to_migrate)>0:
             dest_blocks = self.gpu_allocator.get_migrate_blocks()
+            logger.info("dest_blocks%d",len(dest_blocks))
             for from_info, dest_block in zip(blocks_to_migrate, dest_blocks):
                 blocks_to_copy.append((from_info[0], dest_block))
