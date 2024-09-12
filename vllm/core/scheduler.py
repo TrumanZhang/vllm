@@ -260,7 +260,7 @@ class Scheduler:
         scheduler_config: SchedulerConfig,
         cache_config: CacheConfig,
         lora_config: Optional[LoRAConfig],
-        remote_allocator: Optional[int] = 0,
+        remote_allocator: Optional[int],
     ) -> None:
         self.scheduler_config = scheduler_config
         self.cache_config = cache_config
@@ -277,6 +277,8 @@ class Scheduler:
 
         BlockSpaceManagerImpl = BlockSpaceManager.get_block_space_manager_class(
             version)
+        if remote_allocator is None:
+            remote_allocator=0
 
         # Create the block space manager.
         self.block_manager = BlockSpaceManagerImpl(

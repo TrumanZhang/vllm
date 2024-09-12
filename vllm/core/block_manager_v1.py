@@ -157,12 +157,9 @@ class CachedBlockAllocator(BlockAllocatorBase):
         self.cached_blocks[block_hash] = block
 
     def get_migrate_blocks(self) -> List[int]:
-        blocks_number = []
         start = self.num_blocks
         end = start + self.blocks_for_migrate
-        for block_number in range(start, end):
-            blocks_number.append(block_number)
-        return blocks_number
+        return list(range(start, end))
 
 
 class UncachedBlockAllocator(BlockAllocatorBase):
@@ -364,6 +361,12 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         assert watermark >= 0.0
 
         self.enable_caching = enable_caching
+        if remote_allocator_number is not None:
+            self.remote_allocator_number = remote_allocator_number
+        else:
+            self.remote_allocator_number = 0
+        if self.remote_allocator_number==0:
+            self.enable_long_sequence=False
 
         if block_migrate_size is not None:
             self.block_migrate_size = block_migrate_size
@@ -381,10 +384,7 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             self.num_remote_blocks = num_remote_blocks
         else:
             self.num_remote_blocks = 0
-        if remote_allocator_number is not None:
-            self.remote_allocator_number = remote_allocator_number
-        else:
-            self.remote_allocator_number = 0
+        
         self.remote_allocator = RemoteAllocator(block_size,
                                                 self.num_remote_blocks,
                                                 self.remote_allocator_number,
@@ -397,7 +397,8 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             self.blocks_for_migrate = 0
 
         if self.enable_caching:
-            logger.info("Automatic prefix caching is enabled.")
+            logger.info("^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+                        "Automatic prefix caching is enabled.")
             self.gpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
                 Device.GPU, block_size, num_gpu_blocks, self.blocks_for_migrate)
             self.cpu_allocator: BlockAllocatorBase = CachedBlockAllocator(
