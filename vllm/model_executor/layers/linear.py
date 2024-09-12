@@ -712,6 +712,7 @@ class SequenceParallelLinearForGather:
             output_list=[output.split(1,0)]
             output2_list=[output.split(1,0)]
             output3_list=[output.split(1,0)]
+            logger.info("gather:len=%d,world_size=%d",len(output_list),elf.world_size)
             output_list_new=[output_list[i] for i in range(self.world_size) if i in filter]
             output2_list_new=[output2_list[i] for i in range(self.world_size) if i in filter]
             output3_list_new=[output3_list[i] for i in range(self.world_size) if i in filter]
