@@ -703,23 +703,21 @@ class SequenceParallelLinearForGather:
         # gather(input_,dst,dim),dim is untest.
         # output need be the shape
         # [num_seqs, num_heads, num_sequece_block, head_size]
-        size_=input_.size(-1)
-        size_2=input_2.size(-1)
-        size_3=input_3.size(-1)
-        output = get_sp_group(self.tp_rank).all_gather(input_, -1)
-        output2 = get_sp_group(self.tp_rank).all_gather(input_2, -1)
-        output3 = get_sp_group(self.tp_rank).all_gather(input_3, -1)
+        
+        output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
+        output2 = get_sp_group(self.tp_rank).all_gather_extension(input_2, -1)
+        output3 = get_sp_group(self.tp_rank).all_gather_extension(input_3, -1)
         if self.tp_rank>=0:
             filter=[self.tp_rank]+list(range(self.tp_size,self.world_size))
-            output_list=[output.split(size_,-1)]
-            output2_list=[output.split(size_2,-1)]
-            output3_list=[output.split(size_3,-1)]
+            output_list=[output.split(1,0)]
+            output2_list=[output.split(1,0)]
+            output3_list=[output.split(1,0)]
             output_list_new=[output_list[i] for i in range(self.world_size) if i in filter]
             output2_list_new=[output2_list[i] for i in range(self.world_size) if i in filter]
             output3_list_new=[output3_list[i] for i in range(self.world_size) if i in filter]
-            output=torch.stack(output_list_new,dim=-2)
-            output2=torch.stack(output2_list_new,dim=-1)
-            output3=torch.stack(output3_list_new,dim=-1)
+            output=torch.squeeze(torch.stack(output_list_new,dim=-2),0)
+            output2=torch.squeeze(torch.stack(output2_list_new,dim=-1),0)
+            output3=torch.squeeze(torch.stack(output3_list_new,dim=-1),0)
 
         return output, output2, output3
 
