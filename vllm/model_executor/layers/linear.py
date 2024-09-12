@@ -704,7 +704,7 @@ class SequenceParallelLinearForGather:
         # output need be the shape
         # [num_seqs, num_heads, num_sequece_block, head_size]
         size=list(input_.size())
-        str=",".join(size)
+        str=",".join(map(str,size))
         logger.info("input_size=%s,global_rank=%d",str,get_sp_group(0).rank_in_group)
         output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
         output2 = get_sp_group(self.tp_rank).all_gather_extension(input_2, -1)
