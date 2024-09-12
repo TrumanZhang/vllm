@@ -44,7 +44,7 @@ class EngineArgs:
     enable_long_sequence: bool = False
     max_parallel_loading_workers: Optional[int] = None
     block_size: int = 16
-    enable_prefix_caching: bool = False
+    enable_prefix_caching: bool = True
     disable_sliding_window: bool = False
     use_v2_block_manager: bool = False
     swap_space: int = 4  # GiB
