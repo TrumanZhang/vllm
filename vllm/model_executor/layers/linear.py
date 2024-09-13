@@ -716,6 +716,14 @@ class SequenceParallelLinearForGather:
         output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
         output2 = get_sp_group(self.tp_rank).all_gather_extension(input_2, -1)
         output3 = get_sp_group(self.tp_rank).all_gather_extension(input_3, -1)
+        size=list(output.size())
+        str1=",".join(map(str,size))
+        size2=list(output2.size())
+        str2=",".join(map(str,size2))
+        size3=list(output3.size())
+        str3=",".join(map(str,size3))
+        logger.info("gather output_size=%s,output2_size=%s,output3_size=%s,global_rank=%d",
+                    str1,str2,str3,get_sp_group(0).rank_in_group)
         if self.tp_rank>=0:
             filter=[self.tp_rank]+list(range(self.tp_size,self.world_size))
             output_list=list(output.split(1,0))
@@ -723,11 +731,11 @@ class SequenceParallelLinearForGather:
             output3_list=list(output.split(1,0))
             logger.info("gather:len=%d,world_size=%d",len(output_list),self.world_size)
             output_list_new=[torch.squeeze(output_list[i],0).view(shape) for i in range(self.world_size) if i in filter]
-            output2_list_new=[output2_list[i] for i in range(self.world_size) if i in filter]
-            output3_list_new=[output3_list[i] for i in range(self.world_size) if i in filter]
+            output2_list_new=[torch.squeeze(output2_list[i],0) for i in range(self.world_size) if i in filter]
+            output3_list_new=[torch.squeeze(output3_list[i],0) for i in range(self.world_size) if i in filter]
             output=torch.stack(output_list_new,dim=-2)
-            output2=torch.squeeze(torch.stack(output2_list_new,dim=-1),0)
-            output3=torch.squeeze(torch.stack(output3_list_new,dim=-1),0)
+            output2=torch.stack(output2_list_new,dim=-1)
+            output3=torch.stack(output3_list_new,dim=-1)
         size=list(output.size())
         str1=",".join(map(str,size))
         size2=list(output2.size())
