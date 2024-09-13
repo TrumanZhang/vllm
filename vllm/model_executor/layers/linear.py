@@ -703,15 +703,16 @@ class SequenceParallelLinearForGather:
         # gather(input_,dst,dim),dim is untest.
         # output need be the shape
         # [num_seqs, num_heads, num_sequece_block, head_size]
-        
-        
-        output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
         size=list(input_.size())
         str1=",".join(map(str,size))
-        size2=list(output.size())
+        size2=list(input_2.size())
         str2=",".join(map(str,size2))
-        logger.info("input_size=%s,all_gather_size=%s,global_rank=%d",str1,
-                    str2,get_sp_group(0).rank_in_group)
+        size3=list(input_3.size())
+        str3=",".join(map(str,size3))
+        logger.info("input_size=%s,input2_size=%s,input_size=%s,global_rank=%d",
+                    str1,str2,str3,get_sp_group(0).rank_in_group)
+        
+        output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
         output2 = get_sp_group(self.tp_rank).all_gather_extension(input_2, -1)
         output3 = get_sp_group(self.tp_rank).all_gather_extension(input_3, -1)
         if self.tp_rank>=0:
@@ -732,7 +733,7 @@ class SequenceParallelLinearForGather:
         str2=",".join(map(str,size2))
         size3=list(output3.size())
         str3=",".join(map(str,size3))
-        logger.info("ouput_size=%s,ouput2_size=%s,output3_size=%s,global_rank=%d",
+        logger.info("output_size=%s,output2_size=%s,output3_size=%s,global_rank=%d",
                     str1,str2,str3,get_sp_group(0).rank_in_group)
 
         return output, output2, output3
