@@ -628,9 +628,15 @@ def filter_tensor(
         tp_size: int) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
     size_output = list(output.size())
     size_exp_sums = list(out_exp_sums.size())
+    size_max_logits=list(out_max_logits.size())
     size_output[1] = length
     size_exp_sums[1] = length
-    size_max_logits = size_exp_sums
+    size_max_logits[1] = length
+    str_out=",".join(map(str,size_output))
+    str_exp=",".join(map(str,size_exp_sums))
+    str_max=",".join(map(str,size_max_logits))
+    logger.info("sp result,output_size=(%s),exp_sum_size=(%s),max_logits=(%s),",
+                str_out,str_exp,str_max)
     result = torch.empty(size_output, dtype=output.dtype, device=output.device)
     result_exp_sums = torch.empty(size_exp_sums,
                                   dtype=out_exp_sums.dtype,
