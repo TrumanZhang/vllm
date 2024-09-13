@@ -171,11 +171,13 @@ class LlamaAttention(nn.Module):
         # shape[num_seqs, num_heads, max_num_partitions, head_size]
         if num_long_decode_tokens:
             num = num_long_decode_tokens
+            shape=(num,self.num_heads,self.head_dim)
             attn, exp_sum, max_logits = self.parallel_gather.forward(
-                attn_output[-num:], out_exp_sum[-num:], out_max_sums[-num:])
+                attn_output[-num:], out_exp_sum[-num:], out_max_sums[-num:],shape)
+
             # reduce sequence block result
-            attn_temp=attn.view([num,-1,self.num_heads,self.head_dim])
-            attn_output[-num:] = self.attn.reducer(attn_temp, exp_sum, max_logits,
+
+            attn_output[-num:] = self.attn.reducer(attn, exp_sum, max_logits,
                                                    attn_metadata)
         output, _ = self.o_proj(attn_output)
         return output

@@ -697,7 +697,7 @@ class SequenceParallelLinearForGather:
             self.from_rank = from_rank
         self.tp_size=get_tensor_model_parallel_world_size()
         self.world_size=get_world_size()
-    def forward(self, input_, input_2, input_3):
+    def forward(self, input_, input_2, input_3,shape):
         # Set up backprop all-reduce.
 
         #########
@@ -722,7 +722,7 @@ class SequenceParallelLinearForGather:
             output2_list=list(output.split(1,0))
             output3_list=list(output.split(1,0))
             logger.info("gather:len=%d,world_size=%d",len(output_list),self.world_size)
-            output_list_new=[output_list[i] for i in range(self.world_size) if i in filter]
+            output_list_new=[output_list[i].view(shape) for i in range(self.world_size) if i in filter]
             output2_list_new=[output2_list[i] for i in range(self.world_size) if i in filter]
             output3_list_new=[output3_list[i] for i in range(self.world_size) if i in filter]
             output=torch.squeeze(torch.stack(output_list_new,dim=-2),0)
