@@ -703,11 +703,12 @@ class SequenceParallelLinearForGather:
         # gather(input_,dst,dim),dim is untest.
         # output need be the shape
         # [num_seqs, num_heads, num_sequece_block, head_size]
-        size=list(input_.size())
-        str=",".join(map(str,size))
+        
         
         output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
-        size2=list(input_.size())
+        size=list(input_.size())
+        str=",".join(map(str,size))
+        size2=list(output.size())
         str2=",".join(map(str,size2))
         logger.info("input_size=%s,all_gather_size=%s,global_rank=%d",str,
                     str2,get_sp_group(0).rank_in_group)
