@@ -730,7 +730,7 @@ class SequenceParallelLinearForGather:
             output2_list=list(output2.split(1,0))
             output3_list=list(output3.split(1,0))
             logger.info("gather:len=%d,world_size=%d",len(output_list),self.world_size)
-            output_list_new=[torch.squeeze(output_list[i],0).view(shape) for i in range(self.world_size) if i in filter]
+            output_list_new=[torch.squeeze(output_list[i],0).reshape(shape) for i in range(self.world_size) if i in filter]
             output2_list_new=[torch.squeeze(output2_list[i],0) for i in range(self.world_size) if i in filter]
             output3_list_new=[torch.squeeze(output3_list[i],0) for i in range(self.world_size) if i in filter]
             output=torch.stack(output_list_new,dim=-2)
