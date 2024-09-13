@@ -726,6 +726,14 @@ class SequenceParallelLinearForGather:
             output=torch.squeeze(torch.stack(output_list_new,dim=-2),0)
             output2=torch.squeeze(torch.stack(output2_list_new,dim=-1),0)
             output3=torch.squeeze(torch.stack(output3_list_new,dim=-1),0)
+        size=list(output.size())
+        str1=",".join(map(str,size))
+        size2=list(output2.size())
+        str2=",".join(map(str,size2))
+        size3=list(output3.size())
+        str3=",".join(map(str,size3))
+        logger.info("ouput_size=%s,ouput2_size=%s,output3_size=%s,global_rank=%d",
+                    str1,str2,str3,get_sp_group(0).rank_in_group)
 
         return output, output2, output3
 
