@@ -676,7 +676,8 @@ class SequenceParallelLinearForBroastcast:
     def forward(self, input_):
         # Set up backprop all-reduce.
 
-        output = get_sp_group(self.tp_rank).all_gather(input_,0)
+        output = get_sp_group(self.tp_rank).all_gather_extension(input_,-1)
+        
         return output
 
     def extra_repr(self) -> str:
