@@ -707,10 +707,10 @@ class SequenceParallelLinearForGather:
         
         output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
         size=list(input_.size())
-        str=",".join(map(str,size))
+        str1=",".join(map(str,size))
         size2=list(output.size())
         str2=",".join(map(str,size2))
-        logger.info("input_size=%s,all_gather_size=%s,global_rank=%d",str,
+        logger.info("input_size=%s,all_gather_size=%s,global_rank=%d",str1,
                     str2,get_sp_group(0).rank_in_group)
         output2 = get_sp_group(self.tp_rank).all_gather_extension(input_2, -1)
         output3 = get_sp_group(self.tp_rank).all_gather_extension(input_3, -1)
