@@ -716,9 +716,9 @@ class SequenceParallelLinearForGather:
         output3 = get_sp_group(self.tp_rank).all_gather_extension(input_3, -1)
         if self.tp_rank>=0:
             filter=[self.tp_rank]+list(range(self.tp_size,self.world_size))
-            output_list=[output.split(1,0)]
-            output2_list=[output.split(1,0)]
-            output3_list=[output.split(1,0)]
+            output_list=list(output.split(1,0))
+            output2_list=list(output.split(1,0))
+            output3_list=list(output.split(1,0))
             logger.info("gather:len=%d,world_size=%d",len(output_list),self.world_size)
             output_list_new=[output_list[i] for i in range(self.world_size) if i in filter]
             output2_list_new=[output2_list[i] for i in range(self.world_size) if i in filter]
