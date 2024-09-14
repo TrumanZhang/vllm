@@ -913,13 +913,14 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 use_cuda_graph=use_captured_graph)
 
         elif backend_name == "flash_attn" or backend_name == "xformers":
-            length=len(q_remote_distribution)
-            if length==0:
-                logger.info("$$$$$$$$$$$$$$$$$q_remote_dist.len=%d",length)
-            else:
-                size=[len(item) for item in q_remote_distribution]
-                str1=",".join(map(str,size))
-                logger.info("q_remote_dist.len=%d,subsize=(%s)",length,str1)
+            if num_decode_tokens_long>0:
+                length=len(q_remote_distribution)
+                if length==0:
+                    logger.info("$$$$$$$$$$$$$$$$$q_remote_dist.len=%d",length)
+                else:
+                    size=[len(item) for item in q_remote_distribution]
+                    str1=",".join(map(str,size))
+                    logger.info("q_remote_dist.len=%d,subsize=(%s)",length,str1)
             attn_metadata = self.attn_backend.make_metadata(
                 num_prefills=num_prefills,
                 slot_mapping=slot_mapping_tensor,
