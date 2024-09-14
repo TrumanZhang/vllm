@@ -106,7 +106,8 @@ class OnlyAttention(nn.Module):
             length=gather.size(0)
             q,_ = gather.split([self.tp_size,length-self.tp_size],dim=0)
             attn_to_reduce, exp_sum_to_reduce, max_logits_to_reduce = self.attn(
-                q, kv_cache, attn_metadata, self.sp_rank)
+                query=q,key=None,value=None,kv_cache=kv_cache, attn_metadata=attn_metadata,
+                 sp_rank=self.sp_rank)
             shape=(attn_metadata.num_long_decode_tokens,self.num_heads,self.head_dim)
             self.gatherlayer.forward(attn_to_reduce[0], exp_sum_to_reduce[0],
                             max_logits_to_reduce[0],shape)
