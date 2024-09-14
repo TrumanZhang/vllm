@@ -350,6 +350,8 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
             tp_size = query.size(0)
             num_old = query.size(1)
             if remote_metadata := attn_metadata.remote_metadata:
+                length=len(remote_metadata.q_remote_distribution)
+                logger.info("sp_rank=%d,q_remote_dist=%d",sp_rank,length)
                 q_dist = remote_metadata.q_remote_distribution[sp_rank]
                 query_remote = reshape_q(query, q_dist)
                 output = torch.empty_like(query_remote)
