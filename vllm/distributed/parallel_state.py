@@ -1260,8 +1260,15 @@ def get_tensor_model_parallel_rank():
 def get_sequence_parallel_rank():
     """Return my rank for the tensor model parallel group."""
     global_rank = get_world_group().rank_in_group
+    global_size= get_world_group().world_size
     if global_rank >= get_tp_group().world_size:
-        return global_rank-get_tp_group().world_size
+        #head node     sub node
+        #tp_group      tp_group_remain
+        #           sp_group
+        #
+        tp_group_remain_size=get_tp_group().world_size
+        tp_group_size=global_size-tp_group_remain_size
+        return global_rank-tp_group_size
     else:
         return -1
 
