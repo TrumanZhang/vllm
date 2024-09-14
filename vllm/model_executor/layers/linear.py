@@ -712,9 +712,11 @@ class SequenceParallelLinearForGather:
         str3=",".join(map(str,size3))
         logger.info("input_size=%s,input2_size=%s,input_size=%s,global_rank=%d",
                     str1,str2,str3,get_sp_group(0).rank_in_group)
-        
+        #output_size:(world_size,)+input_.size()
         output = get_sp_group(self.tp_rank).all_gather_extension(input_, -1)
+        #output2_size:(world_size,)+input_2.size()
         output2 = get_sp_group(self.tp_rank).all_gather_extension(input_2, -1)
+        #output3_size:(world_size,)+input_3.size()
         output3 = get_sp_group(self.tp_rank).all_gather_extension(input_3, -1)
         size=list(output.size())
         str1=",".join(map(str,size))

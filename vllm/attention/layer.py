@@ -103,7 +103,9 @@ class Attention(nn.Module):
         max_logits: torch.Tensor,
         attn_metadata: AttentionMetadata,
     ) -> torch.Tensor:
-        return self.impl.reducer(tmp_out, exp_sum, max_logits, attn_metadata)
+        output=self.impl.reducer(tmp_out, exp_sum, max_logits, attn_metadata)
+        size_0=output.size(0)
+        return output.view([size_0, -1])
 
     def extra_repr(self) -> str:
         s = f"head_size={self.impl.head_size}"  # type: ignore
