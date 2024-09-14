@@ -262,6 +262,10 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
         return self._cached_remote_metadata
 
 
+
+
+
+
 class XFormersImpl(AttentionImpl[XFormersMetadata]):
     """
     If the input tensors contain prompt tokens, the layout is as follows:

@@ -379,8 +379,9 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
         # self.cache_config.block_migrate_size/self.cache_config.block_size
         # to be modified
         max_sequence_length = 8192
+        block_size=self.cache_config.block_size
         max_block_size = int(max_sequence_length /
-                             self.cache_config.block_size)
+                             block_size)
         seq_lens_remote: List[List[int]] = []
         block_tables_remote: List[List[List[int]]] = []
         q_remote_distribution: List[List[int]] = []
@@ -728,6 +729,12 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                                                        max_block_size])
                                 q_remote_distribution[i].append(q_index)
                                 start_idx = start_idx + max_block_size
+                            if start_idx<length:
+                                seq_lens_remote[i].append((length-start_idx)*block_size)
+                                block_tables_remote[i].extend(
+                                    block_table_remote[start_idx:])
+                                q_remote_distribution[i].append(q_index)
+                            
                     q_index = q_index + 1
                 # Prepare the remote metadata
                 old_index = old_index + 1
