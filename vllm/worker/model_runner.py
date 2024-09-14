@@ -25,7 +25,7 @@ from vllm.attention import AttentionMetadata, get_attn_backend
 from vllm.config import (CacheConfig, DeviceConfig, LoadConfig, LoRAConfig,
                          ModelConfig, ParallelConfig, SchedulerConfig,
                          VisionLanguageConfig)
-from vllm.distributed.parallel_state import graph_capture
+from vllm.distributed.parallel_state import graph_capture,get_sequence_parallel_rank
 from vllm.inputs import INPUT_REGISTRY
 from vllm.logger import init_logger
 from vllm.lora.layers import LoRAMapping
@@ -913,6 +913,13 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 use_cuda_graph=use_captured_graph)
 
         elif backend_name == "flash_attn" or backend_name == "xformers":
+            length=len(q_remote_distribution)
+            if length==0:
+                logger.info("$$$$$$$$$$$$$$$$$q_remote_dist.len=%d",length)
+            else:
+                size=[len(item) for item in q_remote_distribution]
+                str1=",".join(map(str,size))
+                logger.info("q_remote_dist.len=%d,subsize=(%s)",length,str1)
             attn_metadata = self.attn_backend.make_metadata(
                 num_prefills=num_prefills,
                 slot_mapping=slot_mapping_tensor,
@@ -1425,6 +1432,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
 
         multi_modal_kwargs = model_input.multi_modal_kwargs or {}
         if self.is_sp_worker:
+            logger.info("$$$$$$$$$$$$$$$$$to be used sp_rank=%d",get_sequence_parallel_rank())
             hidden_states=model_executable(
                 kv_caches=kv_caches,
                 attn_metadata=model_input.attn_metadata)
@@ -1440,11 +1448,11 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
             hidden_states_reshape = torch.empty_like(hidden_states,
                                                  dtype=hidden_states.dtype,
                                                  device=hidden_states.device)
-        # indexes = model_input.output_reshape_index
-        # if indexes is not None and self.model_config.enable_long_sequence:
-        #     for i in range(len(indexes)):
-        #         hidden_states_reshape[indexes[i]] = hidden_states[i]
-        # else:
+        indexes = model_input.output_reshape_index
+        if indexes is not None and self.model_config.enable_long_sequence:
+            for i in range(len(indexes)):
+                hidden_states_reshape[indexes[i]] = hidden_states[i]
+        else:
             hidden_states_reshape = hidden_states
             #logger.info("executing model end,reshape result end")
         # Compute the logits.

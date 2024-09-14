@@ -1281,9 +1281,7 @@ def destroy_model_parallel():
     # Destroy _SP
     global _SP
     if _SP:
-        for sp in _SP:
-            if sp:
-                sp.destroy()
+        _SP.destroy()
     _SP = None
 
 
