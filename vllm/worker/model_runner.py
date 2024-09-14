@@ -759,6 +759,13 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 item_len = len(seq_lens_remote[i])
                 max_remote_decode_seq_len.append(item_max_seq_len)
                 num_remote_decode_tokens.append(item_len)
+            length=len(q_remote_distribution)
+            if length==0:
+                logger.info("$$$$$$$$$$$$$$$$$q_remote_dist.len=%d",length)
+            else:
+                size=[len(item) for item in q_remote_distribution]
+                str1=",".join(map(str,size))
+                logger.info("q_remote_dist.len=%d,subsize=(%s)",length,str1)
         batch_size = len(input_tokens)
         max_query_len = max(query_lens)
         max_prefill_seq_len = max(prefill_seq_lens, default=0)
@@ -913,14 +920,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 use_cuda_graph=use_captured_graph)
 
         elif backend_name == "flash_attn" or backend_name == "xformers":
-            if num_decode_tokens_long>0:
-                length=len(q_remote_distribution)
-                if length==0:
-                    logger.info("$$$$$$$$$$$$$$$$$q_remote_dist.len=%d",length)
-                else:
-                    size=[len(item) for item in q_remote_distribution]
-                    str1=",".join(map(str,size))
-                    logger.info("q_remote_dist.len=%d,subsize=(%s)",length,str1)
+                
             attn_metadata = self.attn_backend.make_metadata(
                 num_prefills=num_prefills,
                 slot_mapping=slot_mapping_tensor,
@@ -1433,8 +1433,8 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
 
         multi_modal_kwargs = model_input.multi_modal_kwargs or {}
         if self.is_sp_worker:
-            # if decode_meta is not None and decode_meta.num_long_decode_tokens>0:
-            #     logger.info("$$$$$$$$$$$$$$$$$to be used sp_rank=%d",get_sequence_parallel_rank())
+            if decode_meta is not None and decode_meta.num_long_decode_tokens>0:
+                logger.info("$$$$$$$$$$$$$$$$$to be used sp_rank=%d",get_sequence_parallel_rank())
             hidden_states=model_executable(
                 kv_caches=kv_caches,
                 attn_metadata=model_input.attn_metadata)
@@ -1458,7 +1458,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
             hidden_states_reshape = hidden_states
             #logger.info("executing model end,reshape result end")
         # Compute the logits.
-            logits = self.model.compute_logits(hidden_states_reshape,
+        logits = self.model.compute_logits(hidden_states_reshape,
                                            model_input.sampling_metadata)
 
         # Only perform sampling in the driver worker.
