@@ -1432,7 +1432,8 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
 
         multi_modal_kwargs = model_input.multi_modal_kwargs or {}
         if self.is_sp_worker:
-            logger.info("$$$$$$$$$$$$$$$$$to be used sp_rank=%d",get_sequence_parallel_rank())
+            if decode_meta is not None and decode_meta.num_long_decode_tokens>0:
+                logger.info("$$$$$$$$$$$$$$$$$to be used sp_rank=%d",get_sequence_parallel_rank())
             hidden_states=model_executable(
                 kv_caches=kv_caches,
                 attn_metadata=model_input.attn_metadata)
