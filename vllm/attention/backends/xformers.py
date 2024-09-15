@@ -384,7 +384,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                     kv_cache, self.num_kv_heads, self.head_size, True)
                 # Decoding run.
 
-                result = PagedAttention.forward_decode2(
+                result = PagedAttention.forward_decode_v2(
                     decode_query,
                     key_cache,
                     value_cache,
