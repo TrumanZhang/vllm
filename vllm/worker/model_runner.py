@@ -718,7 +718,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                         length = len(table)
                         if length == 0:
                             seq_lens_remote[i].append(0)
-                            block_tables_remote[i].append([padding_mapping])
+                            block_tables_remote[i].append(padding_mapping)
                             q_remote_distribution[i].append(q_index)
                         else:
                             start_idx = 0
