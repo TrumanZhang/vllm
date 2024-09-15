@@ -1486,27 +1486,27 @@ void paged_attention_remote_launcher(
       alibi_slopes
           ? reinterpret_cast<const float*>(alibi_slopes.value().data_ptr())
           : nullptr;
-  int tp_rank=0;
-  T* out_ptr = reinterpret_cast<T*>(out.data_ptr()) + tp_rank * out_tp_stride;
+  int use_rank=0;
+  T* out_ptr = reinterpret_cast<T*>(out.data_ptr()) + use_rank * out_tp_stride;
   float* exp_sums_ptr = reinterpret_cast<float*>(exp_sums.data_ptr()) +
-                          tp_rank * exp_sums_tp_stride;
+                          use_rank * exp_sums_tp_stride;
   float* max_logits_ptr = reinterpret_cast<float*>(max_logits.data_ptr()) +
-                            tp_rank * max_logits_tp_stride;
+                            use_rank * max_logits_tp_stride;
   float* out_exp_sums_ptr =
         reinterpret_cast<float*>(out_exp_sums.data_ptr()) +
-        tp_rank * out_exp_sums_tp_stride;
+        use_rank * out_exp_sums_tp_stride;
   float* out_max_logits_ptr =
         reinterpret_cast<float*>(out_max_logits.data_ptr()) +
-        tp_rank * out_max_logits_tp_stride;
+        use_rank * out_max_logits_tp_stride;
   T* tmp_out_ptr =
-        reinterpret_cast<T*>(tmp_out.data_ptr()) + tp_rank * temp_out_tp_stride;
+        reinterpret_cast<T*>(tmp_out.data_ptr()) + use_rank * temp_out_tp_stride;
   T* query_ptr =
-        reinterpret_cast<T*>(query.data_ptr()) + tp_rank * q_tp_stride;
+        reinterpret_cast<T*>(query.data_ptr()) + use_rank * q_tp_stride;
   CACHE_T* key_cache_ptr = reinterpret_cast<CACHE_T*>(key_cache.data_ptr()) +
-                             tp_rank * kv_tp_stride;
+                             use_rank * kv_tp_stride;
   CACHE_T* value_cache_ptr =
         reinterpret_cast<CACHE_T*>(value_cache.data_ptr()) +
-        tp_rank * kv_tp_stride;
+        use_rank * kv_tp_stride;
   int* block_tables_ptr = block_tables.data_ptr<int>();
   int* seq_lens_ptr = seq_lens.data_ptr<int>();
 
