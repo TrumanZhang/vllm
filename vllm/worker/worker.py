@@ -48,6 +48,7 @@ class Worker(LocalOrDistributedWorkerBase):
         speculative_config: Optional[SpeculativeConfig] = None,
         is_driver_worker: bool = False,
         is_sp_worker: bool = False,
+        broadcast_count: int =0,
         model_runner_cls: Optional[Type[GPUModelRunnerBase]] = None,
     ) -> None:
         self.model_config = model_config
@@ -118,6 +119,7 @@ class Worker(LocalOrDistributedWorkerBase):
             ]
         else:
             self.kv_send_stream = torch.cuda.Stream()
+        self.broadcast_count=broadcast_count
 
     def init_device(self) -> None:
         if self.device_config.device.type == "cuda":
