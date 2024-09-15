@@ -1,7 +1,7 @@
 #!/bin/bash
 #export VLLM_LOGGING_LEVEL=DEBUG
 #export NCCL_DEBUG=TRACE
-export VLLM_TRACE_FUNCTION=1
+#export VLLM_TRACE_FUNCTION=1
 
 outputlen=(6000 1500 1500 2000 1500 2000 1500 1000 1500)
 numseqs=(1024 1024 16 128 512 128 512 512 512)
@@ -23,7 +23,7 @@ do
                                 --tensor-parallel-size ${parallelsize[$i]} --sequence-parallel-size 2 \
                                 --result /home/work02/work02.new/llm/vllm_sp/data/result.csv --enable-long-sequence 1\
                                 --max-model-len 8192 --max-num-batched-tokens 1024\
-                                --block-migrate-threshold 4096 --block-migrate-size 1024 --block-migrate-start 2048
+                                --block-migrate-threshold 2048 --block-migrate-size 512 --block-migrate-start 1024
                                 echo "parallel size:${parallelsize[$i]},num prompts:${numprompts[$j]},num batched seqs:${numseqs[$k]},\
                                 max output length:${outputlen[$l]}, sequence-parallel-size:2, max-model-len:8192, max-num-batched-tokens:1024"
                         done

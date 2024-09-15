@@ -847,13 +847,14 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 max_block_table_len_remote = 0
             else:
                 max_block_table_len_remote = max(length)
-            block_tables_remote[i] = make_tensor_with_pad(
+            remote_tensor = make_tensor_with_pad(
                 block_tables_remote[i],
                 max_len=max_block_table_len_remote,
                 pad=0,
                 dtype=torch.int,
                 device=self.device,
             )
+            block_tables_remote_list.append(remote_tensor)
 
         query_lens_tensor = torch.tensor(query_lens,
                                          dtype=torch.long,
