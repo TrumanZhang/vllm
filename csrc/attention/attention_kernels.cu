@@ -1486,7 +1486,7 @@ void paged_attention_remote_launcher(
       alibi_slopes
           ? reinterpret_cast<const float*>(alibi_slopes.value().data_ptr())
           : nullptr;
-  int tp_rank=0
+  int tp_rank=0;
   T* out_ptr = reinterpret_cast<T*>(out.data_ptr()) + tp_rank * out_tp_stride;
   float* exp_sums_ptr = reinterpret_cast<float*>(exp_sums.data_ptr()) +
                           tp_rank * exp_sums_tp_stride;
