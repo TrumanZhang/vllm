@@ -143,7 +143,7 @@ class GroupCoordinator:
         for ranks in group_ranks:
             device_group = torch.distributed.new_group(
                 ranks, backend=torch_distributed_backend)
-            logger.info("init_groupCoordinator created device_group")
+            # logger.info("init_groupCoordinator created device_group")
             # a group with `gloo` backend, to allow direct coordination between
             # processes through the CPU.
             cpu_group = torch.distributed.new_group(ranks, backend="gloo")
@@ -1184,16 +1184,16 @@ def model_parallel_is_initialized():
 def sequence_parallel_is_initialized(sequence_parallel_size: int,
                                      test_sequence_i: bool = False, rank: int = 0):
     """Check if tensor and pipeline parallel groups are initialized."""
-    if sequence_parallel_size == 0:
-        return True
-    # if is_tp_pp_node:
-    sp_is_initialized = True
-    if _SP is None:
-        sp_is_initialized = False
-    else:
-        if test_sequence_i:
-            if _SP[rank] is None:
-                sp_is_initialized = False
+    # if sequence_parallel_size == 0:
+    #     return True
+    # # if is_tp_pp_node:
+    # sp_is_initialized = True
+    # if _SP is None:
+    #     sp_is_initialized = False
+    # else:
+    #     if test_sequence_i:
+    #         if _SP[rank] is None:
+    #             sp_is_initialized = False
     #     else:
     #         sp = _SP[rank]
     #         if sp is None:
@@ -1209,7 +1209,7 @@ def sequence_parallel_is_initialized(sequence_parallel_size: int,
     #                 if item is None:
     #                     sp_is_initialized = False
     #                     break
-    return sp_is_initialized
+    return _SP is not None
 
 
 _TP_STATE_PATCHED = False
@@ -1265,7 +1265,6 @@ def get_sequence_parallel_rank():
         #head node     sub node
         #tp_group      tp_group_remain
         #           sp_group
-        #
         tp_group_remain_size=get_tp_group().world_size
         tp_group_size=global_size-tp_group_remain_size
         return global_rank-tp_group_size
