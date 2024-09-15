@@ -139,7 +139,7 @@ class GroupCoordinator:
         self.local_rank = local_rank
         self.device_group = None
         self.cpu_group = None
-        logger.info("init_groupCoordinator enter")
+        # logger.info("init_groupCoordinator enter")
         for ranks in group_ranks:
             device_group = torch.distributed.new_group(
                 ranks, backend=torch_distributed_backend)
@@ -147,9 +147,9 @@ class GroupCoordinator:
             # a group with `gloo` backend, to allow direct coordination between
             # processes through the CPU.
             cpu_group = torch.distributed.new_group(ranks, backend="gloo")
-            logger.info("init_groupCoordinator created cpu_group")
+            # logger.info("init_groupCoordinator created cpu_group")
             if self.rank in ranks:
-                logger.info("init_groupCoordinator init ranks,world_size.....")
+                # logger.info("init_groupCoordinator init ranks,world_size.....")
                 self.ranks = ranks
                 self.world_size = len(ranks)
                 self.rank_in_group = ranks.index(self.rank)
@@ -158,7 +158,7 @@ class GroupCoordinator:
 
         assert self.cpu_group is not None
         assert self.device_group is not None
-        logger.info("init_groupCoordinator created group")
+        # logger.info("init_groupCoordinator created group")
         if torch.cuda.is_available():
             self.device = torch.device(f"cuda:{local_rank}")
         else:
@@ -166,10 +166,10 @@ class GroupCoordinator:
         rank_str = ",".join(map(str, self.ranks))
         device_world_size = torch.distributed.get_world_size(self.device_group)
         cpu_world_size = torch.distributed.get_world_size(self.cpu_group)
-        logger.info("init_groupCoordinator,local_rank=%d,rank=%d,rank_in_group=%d,"
-                    "group_ranks=%s,world_size=%d,device_world_size=%d,cpu_world_size:%d",
-                    self.local_rank, self.rank, self.rank_in_group, rank_str,
-                    self.world_size, device_world_size, cpu_world_size)
+        # logger.info("init_groupCoordinator,local_rank=%d,rank=%d,rank_in_group=%d,"
+        #             "group_ranks=%s,world_size=%d,device_world_size=%d,cpu_world_size:%d",
+        #             self.local_rank, self.rank, self.rank_in_group, rank_str,
+        #             self.world_size, device_world_size, cpu_world_size)
 
         self.use_pynccl = use_pynccl
         self.use_custom_allreduce = use_custom_allreduce
@@ -182,36 +182,36 @@ class GroupCoordinator:
 
         self.pynccl_comm: Optional[PyNcclCommunicator]
         if use_pynccl and self.world_size > 1:
-            logger.info("init groupCoordinator--pyncc_comm")
+            # logger.info("init groupCoordinator--pyncc_comm")
             self.pynccl_comm = PyNcclCommunicator(
                 group=self.cpu_group,
                 device=self.device,
             )
         else:
             self.pynccl_comm = None
-        logger.info("end init groupCoordinator--pyncc_comm")
+        # logger.info("end init groupCoordinator--pyncc_comm")
 
         self.ca_comm: Optional[CustomAllreduce]
         if use_custom_allreduce and self.world_size > 1:
             # Initialize a custom fast all-reduce implementation.
-            logger.info("init groupCoordinator--customAllreduce")
+            # logger.info("init groupCoordinator--customAllreduce")
             self.ca_comm = CustomAllreduce(
                 group=self.cpu_group,
                 device=self.device,
             )
         else:
             self.ca_comm = None
-        logger.info("end init groupCoordinator--customAllreduce")
+        # logger.info("end init groupCoordinator--customAllreduce")
 
         from vllm.distributed.device_communicators.shm_broadcast import (
             ShmRingBufferIO)
         self.shm_broadcaster: Optional[ShmRingBufferIO] = None
 
         if self.world_size > 1 and is_in_the_same_node(self.cpu_group):
-            logger.info("init groupCoordinator--shm_broastcaster")
+            # logger.info("init groupCoordinator--shm_broastcaster")
             self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
                 self.cpu_group, 1 << 22, 6)
-        logger.info("end init groupCoordinator--shm_broastcaster")
+        logger.info("end init groupCoordinator")
 
     @property
     def first_rank(self):
