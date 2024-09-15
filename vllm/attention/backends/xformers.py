@@ -367,7 +367,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                 logger.debug(f"num_rem_dec: {num_rem_dec}")
                 logger.debug(f"remote_metadata.num_remote_decode_tokens: {remote_metadata.num_remote_decode_tokens}")
                 
-                assert decode_query.shape[1] == num_rem_dec, \
+                assert decode_query.shape[1] == num_rem_dec
                 assert 0 <= sp_rank < len(remote_metadata.q_remote_distribution), \
                     f"sp_rank {sp_rank} out of bounds for q_remote_distribution of length {len(remote_metadata.q_remote_distribution)}"
                 num_seqs = decode_query.size(1)
