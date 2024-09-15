@@ -1486,75 +1486,73 @@ void paged_attention_remote_launcher(
       alibi_slopes
           ? reinterpret_cast<const float*>(alibi_slopes.value().data_ptr())
           : nullptr;
-#pragma unroll
-  for (int tp_rank = 0; tp_rank < tp_size; tp_rank++) {
-    T* out_ptr = reinterpret_cast<T*>(out.data_ptr()) + tp_rank * out_tp_stride;
-    float* exp_sums_ptr = reinterpret_cast<float*>(exp_sums.data_ptr()) +
+  int tp_rank=0
+  T* out_ptr = reinterpret_cast<T*>(out.data_ptr()) + tp_rank * out_tp_stride;
+  float* exp_sums_ptr = reinterpret_cast<float*>(exp_sums.data_ptr()) +
                           tp_rank * exp_sums_tp_stride;
-    float* max_logits_ptr = reinterpret_cast<float*>(max_logits.data_ptr()) +
+  float* max_logits_ptr = reinterpret_cast<float*>(max_logits.data_ptr()) +
                             tp_rank * max_logits_tp_stride;
-    float* out_exp_sums_ptr =
+  float* out_exp_sums_ptr =
         reinterpret_cast<float*>(out_exp_sums.data_ptr()) +
         tp_rank * out_exp_sums_tp_stride;
-    float* out_max_logits_ptr =
+  float* out_max_logits_ptr =
         reinterpret_cast<float*>(out_max_logits.data_ptr()) +
         tp_rank * out_max_logits_tp_stride;
-    T* tmp_out_ptr =
+  T* tmp_out_ptr =
         reinterpret_cast<T*>(tmp_out.data_ptr()) + tp_rank * temp_out_tp_stride;
-    T* query_ptr =
+  T* query_ptr =
         reinterpret_cast<T*>(query.data_ptr()) + tp_rank * q_tp_stride;
-    CACHE_T* key_cache_ptr = reinterpret_cast<CACHE_T*>(key_cache.data_ptr()) +
+  CACHE_T* key_cache_ptr = reinterpret_cast<CACHE_T*>(key_cache.data_ptr()) +
                              tp_rank * kv_tp_stride;
-    CACHE_T* value_cache_ptr =
+  CACHE_T* value_cache_ptr =
         reinterpret_cast<CACHE_T*>(value_cache.data_ptr()) +
         tp_rank * kv_tp_stride;
-    int* block_tables_ptr = block_tables.data_ptr<int>();
-    int* seq_lens_ptr = seq_lens.data_ptr<int>();
+  int* block_tables_ptr = block_tables.data_ptr<int>();
+  int* seq_lens_ptr = seq_lens.data_ptr<int>();
 
-    constexpr int NUM_WARPS = NUM_THREADS / WARP_SIZE;
-    int max_num_partitions = DIVIDE_ROUND_UP(max_seq_len, PARTITION_SIZE);
-    int logits_size = PARTITION_SIZE * sizeof(float);
-    int outputs_size = (NUM_WARPS / 2) * head_size * sizeof(float);
+  constexpr int NUM_WARPS = NUM_THREADS / WARP_SIZE;
+  int max_num_partitions = DIVIDE_ROUND_UP(max_seq_len, PARTITION_SIZE);
+  int logits_size = PARTITION_SIZE * sizeof(float);
+  int outputs_size = (NUM_WARPS / 2) * head_size * sizeof(float);
 
-    // For paged attention remote kernel.
-    dim3 grid(num_heads, num_seqs, max_num_partitions);
-    int shared_mem_size = std::max(logits_size, outputs_size);
-    // For paged attention v2 reduce kernel.
-    dim3 reduce_grid(num_heads, num_seqs);
-    int reduce_shared_mem_size = 2 * max_num_partitions * sizeof(float);
+  // For paged attention remote kernel.
+  dim3 grid(num_heads, num_seqs, max_num_partitions);
+  int shared_mem_size = std::max(logits_size, outputs_size);
+  // For paged attention v2 reduce kernel.
+  dim3 reduce_grid(num_heads, num_seqs);
+  int reduce_shared_mem_size = 2 * max_num_partitions * sizeof(float);
 
-    dim3 block(NUM_THREADS);
-    const at::cuda::OptionalCUDAGuard device_guard(device_of(query));
-    const cudaStream_t stream = at::cuda::getCurrentCUDAStream();
-    switch (head_size) {
+  dim3 block(NUM_THREADS);
+  const at::cuda::OptionalCUDAGuard device_guard(device_of(query));
+  const cudaStream_t stream = at::cuda::getCurrentCUDAStream();
+  switch (head_size) {
       // NOTE(woosuk): To reduce the compilation time, we only compile for the
       // head sizes that we use in the model. However, we can easily extend this
       // to support any head size which is a multiple of 16.
-      case 64:
-        LAUNCH_PAGED_ATTENTION_V3(64);
-        break;
-      case 80:
-        LAUNCH_PAGED_ATTENTION_V3(80);
-        break;
-      case 96:
-        LAUNCH_PAGED_ATTENTION_V3(96);
-        break;
-      case 112:
-        LAUNCH_PAGED_ATTENTION_V3(112);
-        break;
-      case 128:
-        LAUNCH_PAGED_ATTENTION_V3(128);
-        break;
-      case 192:
-        LAUNCH_PAGED_ATTENTION_V3(192);
-        break;
-      case 256:
-        LAUNCH_PAGED_ATTENTION_V3(256);
-        break;
-      default:
-        TORCH_CHECK(false, "Unsupported head size: ", head_size);
-        break;
-    }
+    case 64:
+      LAUNCH_PAGED_ATTENTION_V3(64);
+      break;
+    case 80:
+      LAUNCH_PAGED_ATTENTION_V3(80);
+      break;
+    case 96:
+      LAUNCH_PAGED_ATTENTION_V3(96);
+      break;
+    case 112:
+      LAUNCH_PAGED_ATTENTION_V3(112);
+      break;
+    case 128:
+      LAUNCH_PAGED_ATTENTION_V3(128);
+      break;
+    case 192:
+      LAUNCH_PAGED_ATTENTION_V3(192);
+      break;
+    case 256:
+      LAUNCH_PAGED_ATTENTION_V3(256);
+      break;
+    default:
+      TORCH_CHECK(false, "Unsupported head size: ", head_size);
+      break;
   }
 }
 
