@@ -760,12 +760,17 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 max_remote_decode_seq_len.append(item_max_seq_len)
                 num_remote_decode_tokens.append(item_len)
             length=len(q_remote_distribution)
-            if length==0:
-                logger.info("$$$$$$$$$$$$$$$$$q_remote_dist.len=%d",length)
-            else:
-                size=[len(item) for item in q_remote_distribution]
-                str1=",".join(map(str,size))
-                logger.info("q_remote_dist.len=%d,subsize=(%s)",length,str1)
+            
+            size=[len(item) for item in q_remote_distribution]
+            str1=",".join(map(str,size))
+            str2=",".join(map(str,seq_lens_remote))
+            size=[item.size(0) for item in block_tables_remote]
+            str3=",".join(map(str,size))
+            logger.info("$$$$$$$$$$$$$$$$$q_remote_dist:len=%d,size=(%s),"
+                        "seq_lens remote:len=%d,size=(%s);block_tables"
+                        "_remote:len=%d,size=(%s)",
+                            length,str1,len(seq_lens_remote),str2,
+                            len(block_tables_remote),str3)
         batch_size = len(input_tokens)
         max_query_len = max(query_lens)
         max_prefill_seq_len = max(prefill_seq_lens, default=0)
