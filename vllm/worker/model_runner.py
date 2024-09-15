@@ -392,7 +392,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             q_remote_distribution.append([])
             # num_remote_decode_tokens.append(0)
             # max_remote_decode_seq_len.append(0)
-        padding_mapping = [_PAD_BLOCK_NUMBER for i in range(1)]
+        padding_mapping:List[int] = [_PAD_BLOCK_NUMBER for i in range(1)]
         #padding_mapping.extend([_PAD_BLOCK_NUMBER] * 10)
 
         # The following fields are only for flashinfer
@@ -725,14 +725,14 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                             while (length - start_idx >= max_block_size):
                                 seq_lens_remote[i].append(max_sequence_length)
                                 block_tables_remote[i].append(
-                                    block_table_remote[start_idx:start_idx +
+                                    table[start_idx:start_idx +
                                                        max_block_size])
                                 q_remote_distribution[i].append(q_index)
                                 start_idx = start_idx + max_block_size
                             if start_idx<length:
                                 seq_lens_remote[i].append((length-start_idx)*block_size)
                                 block_tables_remote[i].append(
-                                    block_table_remote[start_idx:])
+                                    table[start_idx:])
                                 q_remote_distribution[i].append(q_index)
                             
                     q_index = q_index + 1
