@@ -360,6 +360,13 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                                           self.head_size)
                 num_rem_dec = remote_metadata.num_remote_decode_tokens[sp_rank]
                 decode_query = query[:]
+
+                logger.debug(f"query shape: {query.shape}")
+                logger.debug(f"query_remote shape: {query_remote.shape}")
+                logger.debug(f"decode_query shape: {decode_query.shape}")
+                logger.debug(f"num_rem_dec: {num_rem_dec}")
+                logger.debug(f"remote_metadata.num_remote_decode_tokens: {remote_metadata.num_remote_decode_tokens}")
+                
                 assert decode_query.shape[1] == num_rem_dec
                 num_seqs = decode_query.size(1)
                 num_heads = decode_query.size(2)
