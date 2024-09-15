@@ -764,7 +764,7 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             size=[len(item) for item in q_remote_distribution]
             str1=",".join(map(str,size))
             str2=",".join(map(str,seq_lens_remote))
-            size=[item.size(0) for item in block_tables_remote]
+            size=[len(item) for item in block_tables_remote]
             str3=",".join(map(str,size))
             logger.info("$$$$$$$$$$$$$$$$$q_remote_dist:len=%d,size=(%s),"
                         "seq_lens remote:len=%d,size=(%s);block_tables"
