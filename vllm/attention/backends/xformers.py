@@ -368,8 +368,10 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                 logger.debug(f"remote_metadata.num_remote_decode_tokens: {remote_metadata.num_remote_decode_tokens}")
                 
                 assert decode_query.shape[1] == num_rem_dec
-                assert 0 <= sp_rank < len(remote_metadata.q_remote_distribution), \
-                    f"sp_rank {sp_rank} out of bounds for q_remote_distribution of length {len(remote_metadata.q_remote_distribution)}"
+                assert 0 <= sp_rank < len(remote_metadata.block_tables_remote), (
+                    f"sp_rank {sp_rank} out of bounds for block_tables_remote of length {len(remote_metadata.block_tables_remote)}, "
+                    f"block_tables_remote shape: {remote_metadata.block_tables_remote.shape}"
+                )
                 num_seqs = decode_query.size(1)
                 num_heads = decode_query.size(2)
                 exp_sums = torch.empty(
