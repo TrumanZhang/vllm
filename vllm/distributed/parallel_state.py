@@ -210,7 +210,7 @@ class GroupCoordinator:
         if self.world_size > 1 and is_in_the_same_node(self.cpu_group):
             # logger.info("init groupCoordinator--shm_broastcaster")
             self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
-                self.cpu_group, 1 << 22, 16)
+                self.cpu_group, 1 << 22, 6)
         logger.info("end init groupCoordinator")
 
     @property
@@ -454,9 +454,9 @@ class GroupCoordinator:
         # Bypass the function if we are using only 1 GPU.
         if self.world_size == 1:
             return obj
-        # if self.shm_broadcaster is not None:
-        #     assert src == 0, "Shared memory broadcaster only supports src=0"
-        #     return self.shm_broadcaster.broadcast_object(obj)
+        if self.shm_broadcaster is not None:
+            assert src == 0, "Shared memory broadcaster only supports src=0"
+            return self.shm_broadcaster.broadcast_object(obj)
         if self.rank_in_group == src:
             torch.distributed.broadcast_object_list([obj],
                                                     src=self.ranks[src],
