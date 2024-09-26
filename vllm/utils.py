@@ -626,25 +626,32 @@ def filter_tensor(
         output: torch.tensor, out_exp_sums: torch.tensor,
         out_max_logits: torch.tensor, pattern: List[int], length: int,
         tp_size: int) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
+    
     size_output = list(output.size())
     size_exp_sums = list(out_exp_sums.size())
-    size_max_logits=list(out_max_logits.size())
+    size_max_logits = list(out_max_logits.size())
     size_output[1] = length
     size_exp_sums[1] = length
     size_max_logits[1] = length
-    str_out=",".join(map(str,size_output))
-    str_exp=",".join(map(str,size_exp_sums))
-    str_max=",".join(map(str,size_max_logits))
-    logger.info("sp result,output_size=(%s),exp_sum_size=(%s),max_logits=(%s),",
-                str_out,str_exp,str_max)
+    
+    str_out = ",".join(map(str, size_output))
+    str_exp = ",".join(map(str, size_exp_sums))
+    str_max = ",".join(map(str, size_max_logits))
     logger.info(f"Pattern: {pattern}")
-    result = torch.empty(size_output, dtype=output.dtype, device=output.device)
-    result_exp_sums = torch.empty(size_exp_sums,
-                                  dtype=out_exp_sums.dtype,
-                                  device=out_exp_sums.device)
-    result_max_logits = torch.empty(size_max_logits,
-                                    dtype=out_max_logits.dtype,
-                                    device=out_max_logits.device)
+    logger.info(f"sp result,output_size=({str_out}),exp_sum_size=({str_exp}),max_logits=({str_max})")
+
+    try:
+        result = torch.empty(size_output, dtype=output.dtype, device=output.device)
+        result_exp_sums = torch.empty(size_exp_sums, dtype=out_exp_sums.dtype, device=out_exp_sums.device)
+        result_max_logits = torch.empty(size_max_logits, dtype=out_max_logits.dtype, device=out_max_logits.device)
+    except RuntimeError as e:
+        logger.error(f"Failed to allocate memory for tensors: {e}")
+        logger.error(f"Attempted sizes: output={size_output}, exp_sums={size_exp_sums}, max_logits={size_max_logits}")
+        if output.is_cuda:
+            logger.error(f"GPU memory allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB")
+            logger.error(f"GPU memory reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
+        raise  # Re-raise the exception after logging
+
     for tp_rank in range(tp_size):
         index = 0
         old_idx = -1
@@ -652,11 +659,11 @@ def filter_tensor(
             if old_idx != idx:
                 result[tp_rank][index] = output[tp_rank][idx]
                 result_exp_sums[tp_rank][index] = out_exp_sums[tp_rank][idx]
-                result_max_logits[tp_rank][index] = out_max_logits[tp_rank][
-                    idx]
+                result_max_logits[tp_rank][index] = out_max_logits[tp_rank][idx]
                 index += 1
                 old_idx = idx
-    logger.info(f"Result_exp_sums: {result_exp_sums}")
+    
+    logger.info(f"Filter tensor completed. Result shapes: output={result.shape}, exp_sums={result_exp_sums.shape}, max_logits={result_max_logits.shape}")
     return result, result_exp_sums, result_max_logits
 
 
