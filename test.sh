@@ -20,7 +20,7 @@ do
                                 --model /home/work05/Work/models/llm/Llama-2-7b-chat-hf \
                                 --dataset /home/work02/work02.new/llm/benchmarks/vllmfile-main/data/ShareGPT_V3_unfiltered_cleaned_split.json \
                                 --max-num-seqs ${numseqs[$k]} --output-len ${outputlen[$l]} --num-prompts ${numprompts[$j]} \
-                                --tensor-parallel-size ${parallelsize[$i]} --sequence-parallel-size 2 \
+                                --tensor-parallel-size ${parallelsize[$i]} --sequence-parallel-size 3 \
                                 --result /home/work02/work02.new/llm/vllm_sp/data/result.csv --enable-long-sequence 1\
                                 --max-model-len 8192 --max-num-batched-tokens 1024\
                                 --block-migrate-threshold 1024 --block-migrate-size 256 --block-migrate-start 512\
