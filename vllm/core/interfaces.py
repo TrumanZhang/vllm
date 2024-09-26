@@ -135,3 +135,13 @@ class BlockSpaceManager(ABC):
             self, blocks_to_migrate: List[Tuple[int, int, int]],
             blocks_to_copy: List[Tuple[int, int]]) -> None:
         pass
+
+    @abstractmethod
+    def resetSuperBlock(self)->None:
+        pass
+
+    @abstractmethod
+    def updateSuperBlockMapping(self)->None:
+        pass
+
+

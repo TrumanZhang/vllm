@@ -835,6 +835,11 @@ class LLMEngine:
                 execute_model_req=execute_model_req)
         else:
             output = []
+            
+        # In the case where a kvcache superblock is migated in one step,  
+        # the migration of kv cache superblock is completed after the 
+        # execution of model, so we update block mapping first
+        self.scheduler.updateSuperBlockMapping()
 
         request_outputs = self._process_model_outputs(
             output, scheduler_outputs.scheduled_seq_groups,

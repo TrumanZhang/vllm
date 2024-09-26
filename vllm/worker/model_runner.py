@@ -244,9 +244,9 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             sp_worker=1
         else:
             sp_worker=0
-        logger.info("Loading model weights took %.4f GB,model name:%s,is_sp_worker:"
-                    "%d,model_name:%s",self.model_memory_usage / float(2**30),
-                    self.model_config.model,sp_worker,self.model._get_name)
+        # logger.info("Loading model weights took %.4f GB,model name:%s,is_sp_worker:"
+        #             "%d,model_name:%s",self.model_memory_usage / float(2**30),
+        #             self.model_config.model,sp_worker,self.model._get_name)
 
         if self.lora_config:
             assert supports_lora(self.model), "Model does not support LoRA"
@@ -392,8 +392,8 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             q_remote_distribution.append([])
             # num_remote_decode_tokens.append(0)
             # max_remote_decode_seq_len.append(0)
-        padding_mapping = []
-        padding_mapping.extend([_PAD_BLOCK_NUMBER] * max_block_size)
+        padding_mapping:List[int] = [_PAD_BLOCK_NUMBER for i in range(1)]
+        #padding_mapping.extend([_PAD_BLOCK_NUMBER] * 10)
 
         # The following fields are only for flashinfer
         # Please follow https://docs.flashinfer.ai/tutorials/kv_layout.html#page-layout
@@ -662,10 +662,10 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                     input_positions_long.extend(
                         list(range(context_len, seq_len)))
 
-                    assert query_len == 1, (
-                        "seq_len: {}, context_len: {}, query_len: {}".format(
-                            seq_len, context_len, query_len))
-                    num_decode_tokens_long += query_len
+                    # assert query_len == 1, (
+                    #     "seq_len: {}, context_len: {}, query_len: {}".format(
+                    #         seq_len, context_len, query_len))
+                    num_decode_tokens_long += query_len_long
                     decode_seq_lens_long.append(sliding_seq_len - remote_len)
                     output_reshape_index_long.append(old_index)
 
@@ -718,21 +718,21 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                         length = len(table)
                         if length == 0:
                             seq_lens_remote[i].append(0)
-                            block_tables_remote[i].extend([padding_mapping])
+                            block_tables_remote[i].append(padding_mapping)
                             q_remote_distribution[i].append(q_index)
                         else:
                             start_idx = 0
                             while (length - start_idx >= max_block_size):
                                 seq_lens_remote[i].append(max_sequence_length)
-                                block_tables_remote[i].extend(
-                                    block_table_remote[start_idx:start_idx +
+                                block_tables_remote[i].append(
+                                    table[start_idx:start_idx +
                                                        max_block_size])
                                 q_remote_distribution[i].append(q_index)
                                 start_idx = start_idx + max_block_size
                             if start_idx<length:
                                 seq_lens_remote[i].append((length-start_idx)*block_size)
-                                block_tables_remote[i].extend(
-                                    block_table_remote[start_idx:])
+                                block_tables_remote[i].append(
+                                    table[start_idx:])
                                 q_remote_distribution[i].append(q_index)
                             
                     q_index = q_index + 1
@@ -847,13 +847,14 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
                 max_block_table_len_remote = 0
             else:
                 max_block_table_len_remote = max(length)
-            block_tables_remote[i] = make_tensor_with_pad(
+            remote_tensor = make_tensor_with_pad(
                 block_tables_remote[i],
                 max_len=max_block_table_len_remote,
                 pad=0,
                 dtype=torch.int,
                 device=self.device,
             )
+            block_tables_remote_list.append(remote_tensor)
 
         query_lens_tensor = torch.tensor(query_lens,
                                          dtype=torch.long,
@@ -1439,11 +1440,13 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         multi_modal_kwargs = model_input.multi_modal_kwargs or {}
         if self.is_sp_worker:
             if decode_meta is not None and decode_meta.num_long_decode_tokens>0:
-                logger.info("$$$$$$$$$$$$$$$$$to be used sp_rank=%d",get_sequence_parallel_rank())
+                logger.info("$$$$$$$$$$$$$$$$$sp_rank=%d enter execute_model",get_sequence_parallel_rank())
             hidden_states=model_executable(
                 kv_caches=kv_caches,
                 attn_metadata=model_input.attn_metadata)
         else:
+            if decode_meta is not None and decode_meta.num_long_decode_tokens>0:
+                logger.info("$$$$$$$$$$$$$$$$$tp worker enter execute_model",)
             hidden_states = model_executable(
                 input_ids=model_input.input_tokens,
                 positions=model_input.input_positions,

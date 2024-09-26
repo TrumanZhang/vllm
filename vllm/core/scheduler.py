@@ -1271,3 +1271,5 @@ class Scheduler:
             num_new_tokens = min(num_new_tokens,
                                  budget.remaining_token_budget())
         return num_new_tokens
+    def updateSuperBlockMapping(self)->None:
+        self.block_manager.updateSuperBlockMapping()

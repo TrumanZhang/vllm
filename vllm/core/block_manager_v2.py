@@ -440,3 +440,10 @@ class BlockSpaceManagerV2(BlockSpaceManager):
                 blocks[seq.seq_id] = block_table.blocks
         combined_blocks = list(chain(*blocks.values()))
         return combined_blocks
+    
+    def resetSuperBlock(self)->None:
+        pass
+
+    def updateSuperBlockMapping(self)->None:
+        pass
+

@@ -351,7 +351,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
             num_old = query.size(1)
             if remote_metadata := attn_metadata.remote_metadata:
                 length=len(remote_metadata.q_remote_distribution)
-                logger.info("###################sp_rank=%d,q_remote_dist=%d",
+                logger.info("###################sp_rank=%d,q_remote_dist=%d,",
                             sp_rank,length)
                 q_dist = remote_metadata.q_remote_distribution[sp_rank]
                 query_remote = reshape_q(query, q_dist,tp_size)
@@ -361,11 +361,11 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                 num_rem_dec = remote_metadata.num_remote_decode_tokens[sp_rank]
                 decode_query = query[:]
 
-                logger.debug(f"query shape: {query.shape}")
-                logger.debug(f"query_remote shape: {query_remote.shape}")
-                logger.debug(f"decode_query shape: {decode_query.shape}")
-                logger.debug(f"num_rem_dec: {num_rem_dec}")
-                logger.debug(f"remote_metadata.num_remote_decode_tokens: {remote_metadata.num_remote_decode_tokens}")
+                # logger.debug(f"query shape: {query.shape}")
+                # logger.debug(f"query_remote shape: {query_remote.shape}")
+                # logger.debug(f"decode_query shape: {decode_query.shape}")
+                # logger.debug(f"num_rem_dec: {num_rem_dec}")
+                # logger.debug(f"remote_metadata.num_remote_decode_tokens: {remote_metadata.num_remote_decode_tokens}")
                 
                 assert decode_query.shape[1] == num_rem_dec
                 assert 0 <= sp_rank < len(remote_metadata.block_tables_remote), (
@@ -386,22 +386,20 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                 )
                 key_cache, value_cache = PagedAttention.split_kv_cache(
                     kv_cache, self.num_kv_heads, self.head_size, True)
-                # Decoding run.
-
+                # Decoding run
                 result = PagedAttention.forward_decode_v2(
-                    decode_query,
-                    key_cache,
-                    value_cache,
-                    remote_metadata.block_tables_remote[sp_rank],
-                    remote_metadata.seq_lens_remote_tensor[sp_rank],
-                    remote_metadata.max_remote_decode_seq_len[sp_rank],
-                    remote_metadata.q_remote_distribution[sp_rank][:],
-                    self.kv_cache_dtype,
-                    self.num_kv_heads,
-                    self.scale,
-                    self.alibi_slopes,
-                    kv_scale,
-                    is_remote,
+                    query=decode_query,
+                    key_cache=key_cache,
+                    value_cache=value_cache,
+                    block_tables=remote_metadata.block_tables_remote[sp_rank],
+                    seq_lens=remote_metadata.seq_lens_remote_tensor[sp_rank],
+                    max_seq_len=remote_metadata.max_remote_decode_seq_len[sp_rank],
+                    kv_cache_dtype=self.kv_cache_dtype,
+                    num_kv_heads=self.num_kv_heads,
+                    scale=self.scale,
+                    alibi_slopes=self.alibi_slopes,
+                    kv_scale=kv_scale,
+                    is_remote=is_remote,
                 )
                 output[:], exp_sums[:], max_log[:] = result
 

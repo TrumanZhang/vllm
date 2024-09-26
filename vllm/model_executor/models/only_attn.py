@@ -30,7 +30,9 @@ from transformers import LlamaConfig
 from vllm.attention import Attention, AttentionMetadata
 from vllm.config import CacheConfig, LoRAConfig
 from vllm.distributed import (get_sequence_parallel_rank,
-                              get_tensor_model_parallel_world_size)
+                              get_tensor_model_parallel_world_size,
+                              get_world_size)
+
 from vllm.model_executor.layers.linear import (
     SequenceParallelLinearForBroastcast, SequenceParallelLinearForGather)
 from vllm.model_executor.layers.quantization.base_config import (
@@ -53,10 +55,15 @@ class OnlyAttention(nn.Module):
     ) -> None:
         super().__init__()
         self.hidden_size = hidden_size
-        self.tp_size = get_tensor_model_parallel_world_size()
+        # For only attention, tp_size should be the tp_size of its complementary group, 
+        # temporarily modified like this
+        self.tp_size = get_world_size() - get_tensor_model_parallel_world_size()
         tp_size = self.tp_size
         self.total_num_heads = num_heads
-        assert self.total_num_heads % tp_size == 0
+        assert self.total_num_heads % tp_size == 0, (
+            f"Total number of attention heads ({self.total_num_heads}) must be divisible "
+            f"by tensor parallel size ({tp_size}). "
+        )
         self.num_heads = self.total_num_heads // tp_size
         self.total_num_kv_heads = num_kv_heads
         if self.total_num_kv_heads >= tp_size:
@@ -79,8 +86,8 @@ class OnlyAttention(nn.Module):
                               quant_config=quant_config)
 
         self.sp_rank = get_sequence_parallel_rank()
-        self.broastcastlayer=SequenceParallelLinearForBroastcast(-1)
-        self.gatherlayer = SequenceParallelLinearForGather(-1)
+        self.broastcastlayer=SequenceParallelLinearForBroastcast()
+        self.gatherlayer = SequenceParallelLinearForGather()
 
     #     def __init__(
     #     self,
@@ -99,18 +106,16 @@ class OnlyAttention(nn.Module):
         kv_cache: torch.Tensor,
         attn_metadata: AttentionMetadata,
     ) -> None:
-        if attn_metadata.num_long_decode_tokens>0:
-            q=torch.empty([attn_metadata.num_long_decode_tokens,self.num_heads,self.head_dim],device='cuda')
-            
+        if attn_metadata.num_long_decode_tokens > 0:
+            q=torch.empty([attn_metadata.num_long_decode_tokens,self.num_heads,self.head_dim], device='cuda')
             gather=self.broastcastlayer.forward(q)
             length=gather.size(0)
             q,_ = gather.split([self.tp_size,length-self.tp_size],dim=0)
             attn_to_reduce, exp_sum_to_reduce, max_logits_to_reduce = self.attn(
                 query=q,key=None,value=None,kv_cache=kv_cache, attn_metadata=attn_metadata,
                  sp_rank=self.sp_rank)
-            shape=(attn_metadata.num_long_decode_tokens,self.num_heads,self.head_dim)
             self.gatherlayer.forward(attn_to_reduce[0], exp_sum_to_reduce[0],
-                            max_logits_to_reduce[0],shape)
+                            max_logits_to_reduce[0])
 
 
 class OnlyAttentionLayer(nn.Module):

@@ -81,6 +81,7 @@ class RayGPUExecutor(DistributedGPUExecutor):
             speculative_config=self.speculative_config,
             is_driver_worker=rank == 0,
             is_sp_worker=is_sp_worker,
+            broadcast_count=0,
         )
 
     def _configure_ray_workers_use_nsight(self,
