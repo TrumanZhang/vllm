@@ -51,6 +51,7 @@ from vllm.utils import is_hip, print_warning_once
 
 from .interfaces import SupportsLoRA
 
+from vllm.logger import init_logger
 logger = init_logger(__name__)
 
 class LlamaMLP(nn.Module):
