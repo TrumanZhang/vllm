@@ -665,14 +665,11 @@ class QKVParallelLinear(ColumnParallelLinear):
 
 class SequenceParallelLinearForBroastcast:
 
-    def __init__(self, from_rank: Optional[int]):
+    def __init__(self, from_rank: int = -1):
         # Divide the weight matrix along the last dimension.
         #NOTE: For only-attention nodes, using tp_rank may cause errors.
         self.tp_rank = get_tensor_model_parallel_rank()
-        if from_rank is None:
-            self.from_rank = -1
-        else:
-            self.from_rank = from_rank
+        self.from_rank = from_rank
 
     def forward(self, input_):
         # Set up backprop all-reduce.
@@ -687,14 +684,11 @@ class SequenceParallelLinearForBroastcast:
 
 class SequenceParallelLinearForGather:
 
-    def __init__(self, from_rank: Optional[int]):
+    def __init__(self, from_rank: int = -1):
         # Divide the weight matrix along the last dimension.
         #NOTE: For only-attention nodes, using tp_rank may cause errors.
         self.tp_rank = get_tensor_model_parallel_rank()
-        if from_rank is None:
-            self.from_rank = -1
-        else:
-            self.from_rank = from_rank
+        self.from_rank = from_rank
         self.world_size=get_world_size()
     def forward(self, input_, input_2, input_3):
         # Set up backprop all-reduce.
