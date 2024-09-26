@@ -24,7 +24,7 @@ do
                                 --result /home/work02/work02.new/llm/vllm_sp/data/result.csv --enable-long-sequence 1\
                                 --max-model-len 8192 --max-num-batched-tokens 1024\
                                 --block-migrate-threshold 1024 --block-migrate-size 256 --block-migrate-start 512\
-                                --disable-custom-all-reduce 1\
+                                --disable-custom-all-reduce 1
                                 echo "parallel size:${parallelsize[$i]},num prompts:${numprompts[$j]},num batched seqs:${numseqs[$k]},\
                                 max output length:${outputlen[$l]}, sequence-parallel-size:2, max-model-len:8192, max-num-batched-tokens:1024"
                         done

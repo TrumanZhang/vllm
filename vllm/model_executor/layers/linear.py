@@ -667,6 +667,7 @@ class SequenceParallelLinearForBroastcast:
 
     def __init__(self, from_rank: Optional[int]):
         # Divide the weight matrix along the last dimension.
+        #NOTE: For only-attention nodes, using tp_rank may cause errors.
         self.tp_rank = get_tensor_model_parallel_rank()
         if from_rank is None:
             self.from_rank = -1
@@ -675,9 +676,7 @@ class SequenceParallelLinearForBroastcast:
 
     def forward(self, input_):
         # Set up backprop all-reduce.
-
         output = get_sp_group(self.tp_rank).all_gather_extension(input_,-1)
-        
         return output
 
     def extra_repr(self) -> str:
@@ -690,14 +689,14 @@ class SequenceParallelLinearForGather:
 
     def __init__(self, from_rank: Optional[int]):
         # Divide the weight matrix along the last dimension.
+        #NOTE: For only-attention nodes, using tp_rank may cause errors.
         self.tp_rank = get_tensor_model_parallel_rank()
         if from_rank is None:
             self.from_rank = -1
         else:
             self.from_rank = from_rank
-        self.tp_size=get_tensor_model_parallel_world_size()
         self.world_size=get_world_size()
-    def forward(self, input_, input_2, input_3,shape):
+    def forward(self, input_, input_2, input_3):
         # Set up backprop all-reduce.
 
         #########
@@ -726,27 +725,6 @@ class SequenceParallelLinearForGather:
         # str3=",".join(map(str,size3))
         # logger.info("gather output_size=%s,output2_size=%s,output3_size=%s,global_rank=%d",
         #             str1,str2,str3,get_sp_group(0).rank_in_group)
-        if self.tp_rank>=0:
-            filter=[self.tp_rank]+list(range(self.tp_size,self.world_size))
-            output_list=list(output.split(1,0))
-            output2_list=list(output2.split(1,0))
-            output3_list=list(output3.split(1,0))
-            # logger.info("gather:len=%d,world_size=%d",len(output_list),self.world_size)
-            output_list_new=[torch.squeeze(output_list[i],0).reshape(shape) for i in range(self.world_size) if i in filter]
-            output2_list_new=[torch.squeeze(output2_list[i],0) for i in range(self.world_size) if i in filter]
-            output3_list_new=[torch.squeeze(output3_list[i],0) for i in range(self.world_size) if i in filter]
-            output=torch.stack(output_list_new,dim=-2)
-            output2=torch.stack(output2_list_new,dim=-1)
-            output3=torch.stack(output3_list_new,dim=-1)
-        size=list(output.size())
-        str1=",".join(map(str,size))
-        size2=list(output2.size())
-        str2=",".join(map(str,size2))
-        size3=list(output3.size())
-        str3=",".join(map(str,size3))
-        logger.info("output_size=%s,output2_size=%s,output3_size=%s,global_rank=%d",
-                    str1,str2,str3,get_sp_group(0).rank_in_group)
-
         return output, output2, output3
 
     def extra_repr(self) -> str:
