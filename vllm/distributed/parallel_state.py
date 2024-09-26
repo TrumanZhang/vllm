@@ -1098,6 +1098,8 @@ def initialize_model_parallel(
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
 
+    # To ensure that each node can synchronously execute the group creation operation,
+    # we create a separate group for the remaining SP (sequence parallel) nodes
     ranks = list(range(tp_pp_world_size, world_size))
     rank_str = ",".join(map(str, ranks))
     ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
@@ -1109,6 +1111,7 @@ def initialize_model_parallel(
                 get_world_group().rank, ranks_str)
     _TP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
+    torch.distributed.barrier()
 
     # Build the pipeline model-parallel groups.
     num_pipeline_model_parallel_groups: int = (tp_pp_world_size //
@@ -1137,6 +1140,7 @@ def initialize_model_parallel(
 
     _PP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
+    torch.distributed.barrier()
 
 
 def ensure_model_parallel_initialized(
