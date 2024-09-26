@@ -316,7 +316,13 @@ class RemoteAllocator:
             total_blocks += allocator.get_num_total_blocks()
         return total_blocks
 
-
+class SuperBlockStatus(enum.Enum):
+    """Enum for eviction policy used by make_evictor to instantiate the correct
+       Evictor subclass.
+    """
+    UNSET = enum.auto()
+    WAITING = enum.auto()
+    IGNORE = enum.auto()
 class SequenceSuperBlock:
 
     def __init__(self, seq_id: int, block_size: int, start: int) -> None:
@@ -427,6 +433,9 @@ class BlockSpaceManagerV1(BlockSpaceManager):
                        self.num_total_cpu_blocks,
                        self.num_remote_blocks, self.blocks_for_migrate,
                        self.gpu_allocator.get_num_free_blocks())
+        self.superblock_to_migrate:Optional[SequenceSuperBlock]=None
+        self.superblock_status:SuperBlockStatus=SuperBlockStatus.UNSET
+        self.blocktable_for_superblock:Optional[List[PhysicalTokenBlock]]=None
 
     def _get_seq_num_required_blocks(self, seq: Sequence) -> int:
         return 0 if seq is None else seq.n_blocks
@@ -907,10 +916,16 @@ class BlockSpaceManagerV1(BlockSpaceManager):
         self.migrate_list = list(migrate_set)
 
     def get_kvcache_migrate_block(self, mapping: List[Tuple[int, int,
-                                                            int]]) -> None:
+                                                          int]]) -> None:
+        #now,for the block_mapping of superblock,the generation and updating is devided
+        #into two step:we generate the new mapping before the migration and set the self.
+        #blocktable_forsuperblock according to the new mapping; after the migration, we
+        # firstly update the block_table according to the record(blocktable_forsuperblock) 
         length = len(self.migrate_list)
         if length > 0:
             migrate_block = self.migrate_list[0]
+            self.superblock_to_migrate=migrate_block
+            self.superblock_status=SuperBlockStatus.WAITING
             self.migrate_list.pop(0)
             num_blocks = int(self.block_migrate_size // self.block_size)
             to_blocks = self.remote_allocator.allocate(num_blocks)
@@ -919,13 +934,30 @@ class BlockSpaceManagerV1(BlockSpaceManager):
             start_index = int(migrate_block.start//self.block_size)
             end_index = int((migrate_block.start + migrate_block.block_size)//self.block_size)
             for index in range(start_index, end_index):
-                self.gpu_allocator.free(block_table[index])
+                #self.gpu_allocator.free(block_table[index])
                 to_block = to_blocks[index - start_index]
                 mapping_item = (block_table[index].block_number, remote_rank,
                                 to_block.block_number)
                 mapping.append(mapping_item)
                 block_table[index] = to_block
-            self.block_tables[migrate_block.seq_id] = block_table
+            self.blocktable_for_superblock=block_table
+            #self.block_tables[migrate_block.seq_id] = block_table
+    
+    def resetSuperBlock(self)->None:
+        self.superblock_to_migrate=None
+        self.superblock_status=SuperBlockStatus.UNSET
+        self.blocktable_for_superblock=None
+    
+    def updateSuperBlockMapping(self)->None:
+        if self.superblock_status==SuperBlockStatus.WAITING:
+            migrate_block=self.superblock_to_migrate
+            block_table = self.block_tables[migrate_block.seq_id]
+            start_index = int(migrate_block.start//self.block_size)
+            end_index = int((migrate_block.start + migrate_block.block_size)//self.block_size)
+            for index in range(start_index, end_index):
+                self.gpu_allocator.free(block_table[index])
+            self.block_tables[migrate_block.seq_id] = self.blocktable_for_superblock
+        self.resetSuperBlock()
 
     def remove_kvcache_migrate_block(self, seq_id: int) -> None:
         length = len(self.migrate_list)

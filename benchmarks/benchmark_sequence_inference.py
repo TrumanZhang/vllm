@@ -375,6 +375,10 @@ if __name__ == "__main__":
     #  block_migrate_size: int = 1024
     # block_migrate_threshold: int = 2048
     # block_migrate_start: int = 1024
+    parser.add_argument('--disable-custom-all-reduce',
+                        type=bool,
+                        default=True,
+                        help='See ParallelConfig.')
     parser.add_argument('--block-migrate-size',
                         type=int,
                         default=None,

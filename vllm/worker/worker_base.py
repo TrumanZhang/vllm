@@ -197,6 +197,7 @@ class LocalOrDistributedWorkerBase(WorkerBase):
     # whether workers for sequence parallel
     is_sp_worker: bool
     model_runner: ModelRunnerBase
+    broadcast_count: int 
 
     @property
     @abstractmethod
@@ -292,12 +293,14 @@ class LocalOrDistributedWorkerBase(WorkerBase):
                     model_input.as_broadcastable_tensor_dict())
                 broadcast_data["num_steps"] = num_steps
                 broadcast_sp_tensor_dict(broadcast_data, src=0)
+                logger.info("driver worker: do broastcast,count=%d",self.broadcast_count)
             elif self.do_metadata_broadcast:
                 broadcast_data = worker_input.as_broadcastable_tensor_dict()
                 broadcast_data.update(
                     model_input.as_broadcastable_tensor_dict())
                 broadcast_data["num_steps"] = num_steps
                 broadcast_tensor_dict(broadcast_data, src=0)
+            self.broadcast_count+=1
 
         # elif self.is_sp_worker:
         #     assert self.do_metadata_sp_broadcast
@@ -314,6 +317,7 @@ class LocalOrDistributedWorkerBase(WorkerBase):
         else:
             if self.do_metadata_sp_broadcast:
                 broadcast_data = broadcast_sp_tensor_dict(src=0)
+                logger.info("other worker: recv broastcast,count=%d",self.broadcast_count)
             else:
                 broadcast_data = broadcast_tensor_dict(src=0)
             if not broadcast_data:
@@ -324,6 +328,7 @@ class LocalOrDistributedWorkerBase(WorkerBase):
             model_input = (
                     self.model_runner.
                     make_model_input_from_broadcasted_tensor_dict(broadcast_data))
+            self.broadcast_count+=1
 
         self.execute_worker(worker_input)
 

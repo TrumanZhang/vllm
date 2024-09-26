@@ -113,7 +113,7 @@ class CustomAllreduce:
             "CustomAllreduce should be attached to a non-NCCL group.")
 
         world_size = torch.distributed.get_world_size(group=self.group)
-        logger.info("group-coordinator,init customallreduce"
+        logger.info("group-coordinator,init customallreduce, "
                     "cpu_group_size:%d", world_size)
         if not is_in_the_same_node(group):
             # No need to initialize custom allreduce for multi-node case.
@@ -152,8 +152,8 @@ class CustomAllreduce:
 
         physical_device_id = device_ids[device.index]
         device_str = ",".join(map(str, device_ids))
-        logger.info("custoAllreduce,test_allgather,world_size=%d,rank=%d,"
-                    "visible_devices=%s,device_index=%d,physical_device_id=%d",
+        logger.info("custoAllreduce, test_allgather, world_size=%d,rank=%d,"
+                    "visible_devices=%s, device_index=%d, physical_device_id=%d",
                     world_size, rank, device_str, device.index, physical_device_id)
         tensor = torch.tensor([physical_device_id],
                               dtype=torch.int,

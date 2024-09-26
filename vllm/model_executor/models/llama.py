@@ -51,6 +51,8 @@ from vllm.utils import is_hip, print_warning_once
 
 from .interfaces import SupportsLoRA
 
+from vllm.logger import init_logger
+logger = init_logger(__name__)
 
 class LlamaMLP(nn.Module):
 
@@ -149,8 +151,8 @@ class LlamaAttention(nn.Module):
                               num_kv_heads=self.num_kv_heads,
                               cache_config=cache_config,
                               quant_config=quant_config)
-        self.broastcaster = SequenceParallelLinearForBroastcast(-1)
-        self.parallel_gather = SequenceParallelLinearForGather(-1)
+        self.broastcaster = SequenceParallelLinearForBroastcast()
+        self.parallel_gather = SequenceParallelLinearForGather()
 
     def forward(
         self,
@@ -172,15 +174,56 @@ class LlamaAttention(nn.Module):
         if num_long_decode_tokens:
             num = num_long_decode_tokens
             shape=(num,self.num_heads,self.head_dim)
-            attn, exp_sum, max_logits = self.parallel_gather.forward(
-                attn_output[-num:], out_exp_sum[-num:], out_max_sums[-num:],shape)
-
+            _attn, _exp_sum, _max_logits = self.parallel_gather.forward(
+                attn_output[-num:], out_exp_sum[-num:], out_max_sums[-num:])
+            
+            tp_size = get_tensor_model_parallel_world_size()
+            shape = (attn_metadata.num_long_decode_tokens,self.num_heads,self.head_dim)
+            attn, exp_sum, max_logits= self.filtering(_attn, _exp_sum, _max_logits, shape, tp_size)
             # reduce sequence block result
 
             attn_output[-num:] = self.attn.reducer(attn, exp_sum, max_logits,
                                                    attn_metadata)
         output, _ = self.o_proj(attn_output)
         return output
+    
+    def filtering(
+        self,
+        input: torch.Tensor,
+        input2: torch.Tensor,
+        input3: torch.Tensor,
+        shape: torch.Size,
+        tp_size: int = 1,
+    )-> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Filter and reshape tensors based on tensor parallel rank.
+        
+        Args:
+            input (torch.Tensor): First input tensor to filter
+            input2 (torch.Tensor): Second input tensor to filter
+            input3 (torch.Tensor): Third input tensor to filter
+            shape (torch.Size): Shape to reshape filtered tensors
+        
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Filtered and reshaped tensors
+        """
+        if self.tp_rank >= 0:
+            filter = [self.tp_rank] + list(range(tp_size, self.world_size))
+            output_list = list(input.split(1, 0))
+            output2_list = list(input2.split(1, 0))
+            output3_list = list(input3.split(1, 0))
+            
+            output_list_new = [torch.squeeze(output_list[i], 0).reshape(shape) for i in range(self.world_size) if i in filter]
+            output2_list_new = [torch.squeeze(output2_list[i], 0) for i in range(self.world_size) if i in filter]
+            output3_list_new = [torch.squeeze(output3_list[i], 0) for i in range(self.world_size) if i in filter]
+            
+            output = torch.stack(output_list_new, dim=-2)
+            output2 = torch.stack(output2_list_new, dim=-1)
+            output3 = torch.stack(output3_list_new, dim=-1)
+        
+        logger.info(f"output_size={output.size()}, output2_size={output2.size()}, output3_size={output3.size()}")
+        return output, output2, output3
+
 
 
 class LlamaDecoderLayer(nn.Module):

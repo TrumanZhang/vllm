@@ -139,17 +139,17 @@ class GroupCoordinator:
         self.local_rank = local_rank
         self.device_group = None
         self.cpu_group = None
-        logger.info("init_groupCoordinator enter")
+        # logger.info("init_groupCoordinator enter")
         for ranks in group_ranks:
             device_group = torch.distributed.new_group(
                 ranks, backend=torch_distributed_backend)
-            logger.info("init_groupCoordinator created device_group")
+            # logger.info("init_groupCoordinator created device_group")
             # a group with `gloo` backend, to allow direct coordination between
             # processes through the CPU.
             cpu_group = torch.distributed.new_group(ranks, backend="gloo")
-            logger.info("init_groupCoordinator created cpu_group")
+            # logger.info("init_groupCoordinator created cpu_group")
             if self.rank in ranks:
-                logger.info("init_groupCoordinator init ranks,world_size.....")
+                # logger.info("init_groupCoordinator init ranks,world_size.....")
                 self.ranks = ranks
                 self.world_size = len(ranks)
                 self.rank_in_group = ranks.index(self.rank)
@@ -158,7 +158,7 @@ class GroupCoordinator:
 
         assert self.cpu_group is not None
         assert self.device_group is not None
-        logger.info("init_groupCoordinator created group")
+        # logger.info("init_groupCoordinator created group")
         if torch.cuda.is_available():
             self.device = torch.device(f"cuda:{local_rank}")
         else:
@@ -166,10 +166,10 @@ class GroupCoordinator:
         rank_str = ",".join(map(str, self.ranks))
         device_world_size = torch.distributed.get_world_size(self.device_group)
         cpu_world_size = torch.distributed.get_world_size(self.cpu_group)
-        logger.info("init_groupCoordinator,local_rank=%d,rank=%d,rank_in_group=%d,"
-                    "group_ranks=%s,world_size=%d,device_world_size=%d,cpu_world_size:%d",
-                    self.local_rank, self.rank, self.rank_in_group, rank_str,
-                    self.world_size, device_world_size, cpu_world_size)
+        # logger.info("init_groupCoordinator,local_rank=%d,rank=%d,rank_in_group=%d,"
+        #             "group_ranks=%s,world_size=%d,device_world_size=%d,cpu_world_size:%d",
+        #             self.local_rank, self.rank, self.rank_in_group, rank_str,
+        #             self.world_size, device_world_size, cpu_world_size)
 
         self.use_pynccl = use_pynccl
         self.use_custom_allreduce = use_custom_allreduce
@@ -182,36 +182,36 @@ class GroupCoordinator:
 
         self.pynccl_comm: Optional[PyNcclCommunicator]
         if use_pynccl and self.world_size > 1:
-            logger.info("init groupCoordinator--pyncc_comm")
+            # logger.info("init groupCoordinator--pyncc_comm")
             self.pynccl_comm = PyNcclCommunicator(
                 group=self.cpu_group,
                 device=self.device,
             )
         else:
             self.pynccl_comm = None
-        logger.info("end init groupCoordinator--pyncc_comm")
+        # logger.info("end init groupCoordinator--pyncc_comm")
 
         self.ca_comm: Optional[CustomAllreduce]
         if use_custom_allreduce and self.world_size > 1:
             # Initialize a custom fast all-reduce implementation.
-            logger.info("init groupCoordinator--customAllreduce")
+            # logger.info("init groupCoordinator--customAllreduce")
             self.ca_comm = CustomAllreduce(
                 group=self.cpu_group,
                 device=self.device,
             )
         else:
             self.ca_comm = None
-        logger.info("end init groupCoordinator--customAllreduce")
+        # logger.info("end init groupCoordinator--customAllreduce")
 
         from vllm.distributed.device_communicators.shm_broadcast import (
             ShmRingBufferIO)
         self.shm_broadcaster: Optional[ShmRingBufferIO] = None
 
         if self.world_size > 1 and is_in_the_same_node(self.cpu_group):
-            logger.info("init groupCoordinator--shm_broastcaster")
+            # logger.info("init groupCoordinator--shm_broastcaster")
             self.shm_broadcaster = ShmRingBufferIO.create_from_process_group(
                 self.cpu_group, 1 << 22, 6)
-        logger.info("end init groupCoordinator--shm_broastcaster")
+        logger.info("end init groupCoordinator")
 
     @property
     def first_rank(self):
@@ -564,6 +564,9 @@ class GroupCoordinator:
         # Bypass the function if we are using only 1 GPU.
         if (not torch.distributed.is_initialized() or self.world_size == 1):
             return tensor_dict
+        
+        self.barrier()
+        logger.info(f"All processes entered broadcast_tensor_dict: rank={self.rank}")
 
         group = self.device_group
         metadata_group = self.cpu_group
@@ -634,6 +637,9 @@ class GroupCoordinator:
                     _update_nested_dict(tensor_dict, key, value)
             for async_handle in async_handles:
                 async_handle.wait()
+        
+        self.barrier()
+        logger.info(f"All processes exited broadcast_tensor_dict: rank={self.rank}")
         return tensor_dict
 
     def send_tensor_dict(
@@ -1092,6 +1098,8 @@ def initialize_model_parallel(
         ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
         group_ranks.append(ranks)
 
+    # To ensure that each node can synchronously execute the group creation operation,
+    # we create a separate group for the remaining SP (sequence parallel) nodes
     ranks = list(range(tp_pp_world_size, world_size))
     rank_str = ",".join(map(str, ranks))
     ranks_str = ranks_str+"@"+str(i)+"#"+rank_str
@@ -1103,6 +1111,7 @@ def initialize_model_parallel(
                 get_world_group().rank, ranks_str)
     _TP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
+    torch.distributed.barrier()
 
     # Build the pipeline model-parallel groups.
     num_pipeline_model_parallel_groups: int = (tp_pp_world_size //
@@ -1131,6 +1140,7 @@ def initialize_model_parallel(
 
     _PP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank, backend)
+    torch.distributed.barrier()
 
 
 def ensure_model_parallel_initialized(
@@ -1184,16 +1194,16 @@ def model_parallel_is_initialized():
 def sequence_parallel_is_initialized(sequence_parallel_size: int,
                                      test_sequence_i: bool = False, rank: int = 0):
     """Check if tensor and pipeline parallel groups are initialized."""
-    if sequence_parallel_size == 0:
-        return True
-    # if is_tp_pp_node:
-    sp_is_initialized = True
-    if _SP is None:
-        sp_is_initialized = False
-    else:
-        if test_sequence_i:
-            if _SP[rank] is None:
-                sp_is_initialized = False
+    # if sequence_parallel_size == 0:
+    #     return True
+    # # if is_tp_pp_node:
+    # sp_is_initialized = True
+    # if _SP is None:
+    #     sp_is_initialized = False
+    # else:
+    #     if test_sequence_i:
+    #         if _SP[rank] is None:
+    #             sp_is_initialized = False
     #     else:
     #         sp = _SP[rank]
     #         if sp is None:
@@ -1209,7 +1219,7 @@ def sequence_parallel_is_initialized(sequence_parallel_size: int,
     #                 if item is None:
     #                     sp_is_initialized = False
     #                     break
-    return sp_is_initialized
+    return _SP is not None
 
 
 _TP_STATE_PATCHED = False
@@ -1265,7 +1275,6 @@ def get_sequence_parallel_rank():
         #head node     sub node
         #tp_group      tp_group_remain
         #           sp_group
-        #
         tp_group_remain_size=get_tp_group().world_size
         tp_group_size=global_size-tp_group_remain_size
         return global_rank-tp_group_size

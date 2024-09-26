@@ -48,6 +48,7 @@ class Worker(LocalOrDistributedWorkerBase):
         speculative_config: Optional[SpeculativeConfig] = None,
         is_driver_worker: bool = False,
         is_sp_worker: bool = False,
+        broadcast_count: int =0,
         model_runner_cls: Optional[Type[GPUModelRunnerBase]] = None,
     ) -> None:
         self.model_config = model_config
@@ -110,14 +111,15 @@ class Worker(LocalOrDistributedWorkerBase):
         # SP worker only rx KV cache and master workers just tx KV cache
         # Note the scheduler should call kv_send_stream.synchronize() before
         # the next round, but it is not safe [TODO].
-        if is_sp_worker:
-            tp_pp_world = self.parallel_config.pipeline_parallel_size \
-                * self.parallel_config.tensor_parallel_size
-            self.kv_recv_streams = [
-                torch.cuda.Stream() for _ in range(tp_pp_world)
-            ]
-        else:
-            self.kv_send_stream = torch.cuda.Stream()
+        # if is_sp_worker:
+        #     tp_pp_world = self.parallel_config.pipeline_parallel_size \
+        #         * self.parallel_config.tensor_parallel_size
+        #     self.kv_recv_streams = [
+        #         torch.cuda.Stream() for _ in range(tp_pp_world)
+        #     ]
+        # else:
+        #     self.kv_send_stream = torch.cuda.Stream()
+        self.broadcast_count=broadcast_count
 
     def init_device(self) -> None:
         if self.device_config.device.type == "cuda":
@@ -377,8 +379,8 @@ class Worker(LocalOrDistributedWorkerBase):
         if (enable_mig
                 and worker_input.superblock_to_migrate.numel() > 0):
             chunk_to_migrate = worker_input.superblock_to_migrate.tolist()
-            self.migrate_chunk(dst_chunk=chunk_to_migrate[0],
-                               dst_rank=chunk_to_migrate[1])
+            # self.migrate_chunk(dst_chunk=chunk_to_migrate[0],
+            #                    dst_rank=chunk_to_migrate[1])
 
     def add_lora(self, lora_request: LoRARequest) -> bool:
         return self.model_runner.add_lora(lora_request)
