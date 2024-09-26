@@ -637,6 +637,7 @@ def filter_tensor(
     str_max=",".join(map(str,size_max_logits))
     logger.info("sp result,output_size=(%s),exp_sum_size=(%s),max_logits=(%s),",
                 str_out,str_exp,str_max)
+    logger.info(f"Pattern: {pattern}")
     result = torch.empty(size_output, dtype=output.dtype, device=output.device)
     result_exp_sums = torch.empty(size_exp_sums,
                                   dtype=out_exp_sums.dtype,
@@ -655,6 +656,7 @@ def filter_tensor(
                     idx]
                 index += 1
                 old_idx = idx
+    logger.info(f"Result_exp_sums: {result_exp_sums}")
     return result, result_exp_sums, result_max_logits
 
 

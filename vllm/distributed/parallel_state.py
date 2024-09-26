@@ -564,6 +564,9 @@ class GroupCoordinator:
         # Bypass the function if we are using only 1 GPU.
         if (not torch.distributed.is_initialized() or self.world_size == 1):
             return tensor_dict
+        
+        self.barrier()
+        logger.info(f"All processes entered broadcast_tensor_dict: rank={self.rank}")
 
         group = self.device_group
         metadata_group = self.cpu_group
@@ -634,6 +637,9 @@ class GroupCoordinator:
                     _update_nested_dict(tensor_dict, key, value)
             for async_handle in async_handles:
                 async_handle.wait()
+        
+        self.barrier()
+        logger.info(f"All processes exited broadcast_tensor_dict: rank={self.rank}")
         return tensor_dict
 
     def send_tensor_dict(
