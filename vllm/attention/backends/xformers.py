@@ -25,7 +25,7 @@ class XFormersRemoteBackend(AttentionBackend):
         return "xformersRemote"
 
     @staticmethod
-    def get_impl_cls() -> Type["XFormersImpl"]:
+    def get_impl_cls() -> Type["XFormersRemoteImpl"]:
         return XFormersRemoteImpl
 
     @staticmethod
@@ -331,6 +331,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
         kv_cache_dtype: str,
         blocksparse_params: Optional[Dict[str, Any]] = None,
     ) -> None:
+        logger.info(f"###################\n XFormersRemoteImpl, acctually init!!!")
         if blocksparse_params is not None:
             raise ValueError("XFormersRemote does not support block-sparse attention.")
         self.num_heads = num_heads
@@ -374,7 +375,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
         num_old = query.size(1)
         if remote_metadata := attn_metadata.remote_metadata:
             length = len(remote_metadata.q_remote_distribution)
-            logger.info(f"###################sp_rank={sp_rank},q_remote_dist={length}")
+            logger.info(f"###################\n XFormersRemoteImpl, sp_rank={sp_rank},q_remote_dist={length}")
             q_dist = remote_metadata.q_remote_distribution[sp_rank]
             query_remote = reshape_q(query, q_dist, tp_size)
             output = torch.empty_like(query_remote)
