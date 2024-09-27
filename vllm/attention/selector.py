@@ -33,7 +33,7 @@ def get_attn_backend(
     kv_cache_dtype: Optional[str],
     block_size: int,
     is_blocksparse: bool = False,
-    is_sp_workers: bool = False,
+    is_sp_worker: bool = False,
 ) -> Type[AttentionBackend]:
     """Selects which attention backend to use and lazily imports it."""
 
@@ -53,7 +53,7 @@ def get_attn_backend(
     if backend == _Backend.XFORMERS:
         # In SP (Sharded Parallelism), we distinguish between attention backends
         # loaded by master and worker nodes
-        if is_sp_workers == False:
+        if is_sp_worker == False:
             logger.info("Using XFormers backend.")
             from vllm.attention.backends.xformers import (  # noqa: F401
                 XFormersBackend)

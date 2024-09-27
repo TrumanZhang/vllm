@@ -616,7 +616,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                 self.scale,
                 self.alibi_slopes,
                 kv_scale,
-                is_remote,
+                is_remote=False,
             )
             output[num:], exp_sums[:], max_log[:] = result
         # Reshape the output tensor.
