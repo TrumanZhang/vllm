@@ -23,7 +23,7 @@ class _Backend(enum.Enum):
     IPEX = enum.auto()
 
 
-@lru_cache(maxsize=None)
+# @lru_cache(maxsize=None)
 def get_attn_backend(
     num_heads: int,
     head_size: int,
