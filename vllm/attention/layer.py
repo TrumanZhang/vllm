@@ -90,7 +90,7 @@ class Attention(nn.Module):
         value: Optional[torch.Tensor],
         kv_cache: Optional[torch.Tensor],
         attn_metadata: AttentionMetadata,
-        sp_rank: Optional[int],
+        sp_rank: Optional[int] = -1,
     ) -> torch.Tensor:
 
         return self.impl.forward(query, key, value, kv_cache, attn_metadata,

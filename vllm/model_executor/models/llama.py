@@ -168,7 +168,7 @@ class LlamaAttention(nn.Module):
         if num_long_decode_tokens:
             self.broastcaster.forward(q[-num_long_decode_tokens:])
         attn_output, out_exp_sum, out_max_sums = self.attn(
-            q, k, v, kv_cache, attn_metadata, -1)
+            q, k, v, kv_cache, attn_metadata)
         # gather output:
         # shape[num_seqs, num_heads, max_num_partitions, head_size]
         if num_long_decode_tokens:
