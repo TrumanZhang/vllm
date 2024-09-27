@@ -33,6 +33,7 @@ def get_attn_backend(
     kv_cache_dtype: Optional[str],
     block_size: int,
     is_blocksparse: bool = False,
+    is_sp_workers: bool = False,
 ) -> Type[AttentionBackend]:
     """Selects which attention backend to use and lazily imports it."""
 
@@ -48,12 +49,20 @@ def get_attn_backend(
     if backend == _Backend.FLASH_ATTN:
         from vllm.attention.backends.flash_attn import (  # noqa: F401
             FlashAttentionBackend)
-        return FlashAttentionBackend
+        return FlashAttentionBackend    
     if backend == _Backend.XFORMERS:
-        logger.info("Using XFormers backend.")
-        from vllm.attention.backends.xformers import (  # noqa: F401
-            XFormersBackend)
-        return XFormersBackend
+        # In SP (Sharded Parallelism), we distinguish between attention backends
+        # loaded by master and worker nodes
+        if is_sp_workers == False:
+            logger.info("Using XFormers backend.")
+            from vllm.attention.backends.xformers import (  # noqa: F401
+                XFormersBackend)
+            return XFormersBackend
+        else:
+            logger.info("Using XFormersRemote backend.")
+            from vllm.attention.backends.xformers import (  # noqa: F401
+                XFormersRemoteBackend)
+            return XFormersRemoteBackend    
     elif backend == _Backend.ROCM_FLASH:
         logger.info("Using ROCmFlashAttention backend.")
         from vllm.attention.backends.rocm_flash_attn import (  # noqa: F401

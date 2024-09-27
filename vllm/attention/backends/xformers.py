@@ -18,6 +18,51 @@ from vllm.utils import filter_tensor, reshape_q
 logger = init_logger(__name__)
 
 
+class XFormersRemoteBackend(AttentionBackend):
+
+    @staticmethod
+    def get_name() -> str:
+        return "xformersRemote"
+
+    @staticmethod
+    def get_impl_cls() -> Type["XFormersImpl"]:
+        return XFormersRemoteImpl
+
+    @staticmethod
+    def get_metadata_cls() -> Type["AttentionMetadata"]:
+        return XFormersMetadata
+
+    @staticmethod
+    def get_kv_cache_shape(
+        num_blocks: int,
+        block_size: int,
+        num_kv_heads: int,
+        head_size: int,
+        tp_size: Optional[int],
+    ) -> Tuple[int, ...]:
+        result = PagedAttention.get_kv_cache_shape(num_blocks, block_size,
+                                                   num_kv_heads, head_size)
+        if tp_size is not None and tp_size > 1:
+            result=[tp_size]+list(result)
+            return tuple(result)
+        else:
+            return result
+
+    @staticmethod
+    def swap_blocks(
+        src_kv_cache: torch.Tensor,
+        dst_kv_cache: torch.Tensor,
+        src_to_dst: Dict[int, int],
+    ) -> None:
+        PagedAttention.swap_blocks(src_kv_cache, dst_kv_cache, src_to_dst)
+
+    @staticmethod
+    def copy_blocks(
+        kv_caches: List[torch.Tensor],
+        src_to_dists: torch.Tensor,
+    ) -> None:
+        PagedAttention.copy_blocks(kv_caches, src_to_dists)
+
 class XFormersBackend(AttentionBackend):
 
     @staticmethod
@@ -262,7 +307,142 @@ class XFormersMetadata(AttentionMetadata, PagedAttentionMetadata):
         return self._cached_remote_metadata
 
 
+class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
+    """
+    The input tensors only contains decoding tokens, the layout is as follows:
+    |<----------------- num_decode_tokens ------------------>|	
+    |<--decode_0-->|..........|<--decode_M-1-->|<--padding-->|
 
+    Generation tokens can contain padding when cuda-graph is used.
+    Currently, prompt tokens don't contain any padding.
+
+    Currently, cuda graph is disabled for chunked prefill, meaning there's no
+    padding between prefill and decode tokens.
+    """
+
+    def __init__(
+        self,
+        num_heads: int,
+        head_size: int,
+        scale: float,
+        num_kv_heads: int,
+        alibi_slopes: Optional[List[float]],
+        sliding_window: Optional[int],
+        kv_cache_dtype: str,
+        blocksparse_params: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        if blocksparse_params is not None:
+            raise ValueError("XFormersRemote does not support block-sparse attention.")
+        self.num_heads = num_heads
+        self.head_size = head_size
+        self.scale = float(scale)
+        self.num_kv_heads = num_kv_heads
+        self.alibi_slopes = torch.tensor(alibi_slopes, dtype=torch.float32) if alibi_slopes is not None else None
+        self.sliding_window = sliding_window
+        self.kv_cache_dtype = kv_cache_dtype
+
+        assert self.num_heads % self.num_kv_heads == 0
+        self.num_queries_per_kv = self.num_heads // self.num_kv_heads
+
+        supported_head_sizes = PagedAttention.get_supported_head_sizes()
+        if head_size not in supported_head_sizes:
+            raise ValueError(
+                f"Head size {head_size} is not supported by PagedAttention. "
+                f"Supported head sizes are: {supported_head_sizes}.")
+
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        kv_cache: Optional[torch.Tensor],
+        attn_metadata: "XFormersMetadata",
+        kv_scale: float = 1.0,
+        sp_rank: Optional[int] = -1,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Forward pass with xFormersRemote and PagedAttention.
+
+        Args:
+            query: shape = [tp_size, num_tokens, num_heads * head_size]
+            kv_cache = [2, num_blocks, block_size * num_kv_heads * head_size]
+            attn_metadata: Metadata for attention.
+        Returns:
+            Tuple of (output, exp_sums, max_log)
+            output shape = [num_tokens, num_heads * head_size]
+        """
+        tp_size = query.size(0)
+        num_old = query.size(1)
+        if remote_metadata := attn_metadata.remote_metadata:
+            length = len(remote_metadata.q_remote_distribution)
+            logger.info(f"###################sp_rank={sp_rank},q_remote_dist={length}")
+            q_dist = remote_metadata.q_remote_distribution[sp_rank]
+            query_remote = reshape_q(query, q_dist, tp_size)
+            output = torch.empty_like(query_remote)
+            query = query_remote.view(tp_size, -1, self.num_heads, self.head_size)
+            num_rem_dec = remote_metadata.num_remote_decode_tokens[sp_rank]
+            decode_query = query[:]
+
+            assert decode_query.shape[1] == num_rem_dec
+            assert 0 <= sp_rank < len(remote_metadata.block_tables_remote), (
+                f"sp_rank {sp_rank} out of bounds for block_tables_remote of length {len(remote_metadata.block_tables_remote)}, "
+                f"block_tables_remote shape: {remote_metadata.block_tables_remote[sp_rank].shape}"
+            )
+            num_seqs = decode_query.size(1)
+            num_heads = decode_query.size(2)
+            exp_sums = torch.empty(
+                size=(tp_size, num_seqs, num_heads),
+                dtype=torch.float32,
+                device=output.device,
+            )
+            max_log = torch.empty(
+                size=(tp_size, num_seqs, num_heads),
+                dtype=torch.float32,
+                device=output.device,
+            )
+            key_cache, value_cache = PagedAttention.split_kv_cache(
+                kv_cache, self.num_kv_heads, self.head_size, True)
+            # Decoding run
+            result = PagedAttention.forward_decode_v2(
+                query=decode_query,
+                key_cache=key_cache,
+                value_cache=value_cache,
+                block_tables=remote_metadata.block_tables_remote[sp_rank],
+                seq_lens=remote_metadata.seq_lens_remote_tensor[sp_rank],
+                max_seq_len=remote_metadata.max_remote_decode_seq_len[sp_rank],
+                kv_cache_dtype=self.kv_cache_dtype,
+                num_kv_heads=self.num_kv_heads,
+                scale=self.scale,
+                alibi_slopes=self.alibi_slopes,
+                kv_scale=kv_scale,
+                is_remote=True,
+            )
+            output[:], exp_sums[:], max_log[:] = result
+
+            # Reshape the output tensor.
+            tmp = output.view(tp_size, -1, self.num_heads * self.head_size)
+            return filter_tensor(tmp, exp_sums, max_log, q_dist, num_old, tp_size)
+        
+        raise ValueError("Remote metadata not found")
+    
+
+    def reducer(
+        self,
+        tmp_out: torch.Tensor,
+        exp_sum: torch.Tensor,
+        max_logits: torch.Tensor,
+        attn_metadata: "XFormersMetadata",
+    ) -> torch.Tensor:
+        if decode_meta := attn_metadata.decode_metadata:
+            num_seqs = decode_meta.num_long_decode_tokens
+            if num_seqs > 0:
+                # TODO: seq_lens maybe need to be further designed
+                output = PagedAttention.sequence_block_reducer(
+                    tmp_out, exp_sum, max_logits)
+                return output
+            else:
+                return tmp_out
+        else:
+            return tmp_out
 
 
 
@@ -332,7 +512,6 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
         kv_cache: Optional[torch.Tensor],
         attn_metadata: "XFormersMetadata",
         kv_scale: float = 1.0,
-        sp_rank: Optional[int] = -1,
     ) -> torch.Tensor:
         """Forward pass with xFormers and PagedAttention.
 
@@ -345,68 +524,6 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
         Returns:
             shape = [num_tokens, num_heads * head_size]
         """
-        is_remote = sp_rank is not None and sp_rank != -1
-        if sp_rank is not None and sp_rank != -1:
-            tp_size = query.size(0)
-            num_old = query.size(1)
-            if remote_metadata := attn_metadata.remote_metadata:
-                length=len(remote_metadata.q_remote_distribution)
-                logger.info("###################sp_rank=%d,q_remote_dist=%d,",
-                            sp_rank,length)
-                q_dist = remote_metadata.q_remote_distribution[sp_rank]
-                query_remote = reshape_q(query, q_dist,tp_size)
-                output = torch.empty_like(query_remote)
-                query = query_remote.view(tp_size, -1, self.num_heads,
-                                          self.head_size)
-                num_rem_dec = remote_metadata.num_remote_decode_tokens[sp_rank]
-                decode_query = query[:]
-
-                # logger.debug(f"query shape: {query.shape}")
-                # logger.debug(f"query_remote shape: {query_remote.shape}")
-                # logger.debug(f"decode_query shape: {decode_query.shape}")
-                # logger.debug(f"num_rem_dec: {num_rem_dec}")
-                # logger.debug(f"remote_metadata.num_remote_decode_tokens: {remote_metadata.num_remote_decode_tokens}")
-                
-                assert decode_query.shape[1] == num_rem_dec
-                assert 0 <= sp_rank < len(remote_metadata.block_tables_remote), (
-                    f"sp_rank {sp_rank} out of bounds for block_tables_remote of length {len(remote_metadata.block_tables_remote)}, "
-                    f"block_tables_remote shape: {remote_metadata.block_tables_remote.shape}"
-                )
-                num_seqs = decode_query.size(1)
-                num_heads = decode_query.size(2)
-                exp_sums = torch.empty(
-                    size=(tp_size, num_seqs, num_heads),
-                    dtype=torch.float32,
-                    device=output.device,
-                )
-                max_log = torch.empty(
-                    size=(tp_size, num_seqs, num_heads),
-                    dtype=torch.float32,
-                    device=output.device,
-                )
-                key_cache, value_cache = PagedAttention.split_kv_cache(
-                    kv_cache, self.num_kv_heads, self.head_size, True)
-                # Decoding run
-                result = PagedAttention.forward_decode_v2(
-                    query=decode_query,
-                    key_cache=key_cache,
-                    value_cache=value_cache,
-                    block_tables=remote_metadata.block_tables_remote[sp_rank],
-                    seq_lens=remote_metadata.seq_lens_remote_tensor[sp_rank],
-                    max_seq_len=remote_metadata.max_remote_decode_seq_len[sp_rank],
-                    kv_cache_dtype=self.kv_cache_dtype,
-                    num_kv_heads=self.num_kv_heads,
-                    scale=self.scale,
-                    alibi_slopes=self.alibi_slopes,
-                    kv_scale=kv_scale,
-                    is_remote=is_remote,
-                )
-                output[:], exp_sums[:], max_log[:] = result
-
-                # Reshape the output tensor.
-                tmp = output.view(tp_size, -1, self.num_heads * self.head_size)
-                return filter_tensor(tmp, exp_sums, max_log, q_dist, num_old,
-                                     tp_size)
 
         query = query.view(-1, self.num_heads, self.head_size)
         key = key.view(-1, self.num_kv_heads, self.head_size)
@@ -604,7 +721,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
         if decode_meta := attn_metadata.decode_metadata:
             num_seqs = decode_meta.num_long_decode_tokens
             if num_seqs > 0:
-                # to modify: seq_lens maybe need to be further designed
+                # TODO: seq_lens maybe need to be further designed
                 output = PagedAttention.sequence_block_reducer(
                     tmp_out, exp_sum, max_logits)
                 return output

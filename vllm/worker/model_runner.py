@@ -208,6 +208,8 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             self.model_config.dtype,
             self.kv_cache_dtype,
             self.block_size,
+            is_blocksparse=False,
+            is_sp_worker=self.is_sp_worker,
         ) if num_attn_heads else None
 
         # Multi-modal data support
