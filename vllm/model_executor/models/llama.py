@@ -177,9 +177,8 @@ class LlamaAttention(nn.Module):
             _attn, _exp_sum, _max_logits = self.parallel_gather.forward(
                 attn_output[-num:], out_exp_sum[-num:], out_max_sums[-num:])
             
-            tp_size = get_tensor_model_parallel_world_size()
             shape = (attn_metadata.num_long_decode_tokens,self.num_heads,self.head_dim)
-            attn, exp_sum, max_logits= self.filtering(_attn, _exp_sum, _max_logits, shape, tp_size)
+            attn, exp_sum, max_logits= self.filtering(_attn, _exp_sum, _max_logits, shape)
             # reduce sequence block result
 
             attn_output[-num:] = self.attn.reducer(attn, exp_sum, max_logits,
@@ -193,7 +192,6 @@ class LlamaAttention(nn.Module):
         input2: torch.Tensor,
         input3: torch.Tensor,
         shape: torch.Size,
-        tp_size: int = 1,
     )-> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Filter and reshape tensors based on tensor parallel rank.
@@ -207,19 +205,22 @@ class LlamaAttention(nn.Module):
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Filtered and reshaped tensors
         """
-        if self.tp_rank >= 0:
-            filter = [self.tp_rank] + list(range(tp_size, self.world_size))
-            output_list = list(input.split(1, 0))
-            output2_list = list(input2.split(1, 0))
-            output3_list = list(input3.split(1, 0))
-            
-            output_list_new = [torch.squeeze(output_list[i], 0).reshape(shape) for i in range(self.world_size) if i in filter]
-            output2_list_new = [torch.squeeze(output2_list[i], 0) for i in range(self.world_size) if i in filter]
-            output3_list_new = [torch.squeeze(output3_list[i], 0) for i in range(self.world_size) if i in filter]
-            
-            output = torch.stack(output_list_new, dim=-2)
-            output2 = torch.stack(output2_list_new, dim=-1)
-            output3 = torch.stack(output3_list_new, dim=-1)
+        tp_rank = get_tensor_model_parallel_rank()
+        tp_size = get_tensor_model_parallel_world_size()
+
+        # input.size(0) equals to the workd size
+        filter = [tp_rank] + list(range(tp_size, input.size(0)))
+        output_list = list(input.split(1, 0))
+        output2_list = list(input2.split(1, 0))
+        output3_list = list(input3.split(1, 0))
+        
+        output_list_new = [torch.squeeze(output_list[i], 0).reshape(shape) for i in range(input.size(0)) if i in filter]
+        output2_list_new = [torch.squeeze(output2_list[i], 0) for i in range(input.size(0)) if i in filter]
+        output3_list_new = [torch.squeeze(output3_list[i], 0) for i in range(input.size(0)) if i in filter]
+        
+        output = torch.stack(output_list_new, dim=-2)
+        output2 = torch.stack(output2_list_new, dim=-1)
+        output3 = torch.stack(output3_list_new, dim=-1)
         
         logger.info(f"output_size={output.size()}, output2_size={output2.size()}, output3_size={output3.size()}")
         return output, output2, output3
