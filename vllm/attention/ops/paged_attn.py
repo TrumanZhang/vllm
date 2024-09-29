@@ -54,32 +54,9 @@ class PagedAttention:
         head_size: int,
         tp_size: int = 1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        print(f"Original key_cache shape: {kv_cache.shape}")
-        if tp_size > 1:
-            x = 16 // kv_cache.element_size()
-            tp_size = kv_cache.shape[0]
-            num_blocks = kv_cache.shape[2]
-            kv_cache_group = kv_cache.split(1, 1)
-            key_cache = kv_cache_group[0]             # Add debug prints
-            print(f"tp_size: {tp_size}, num_blocks: {num_blocks}, num_kv_heads: {num_kv_heads}")
-            print(f"head_size: {head_size}, x: {x}")
-
-            # Calculate the size of the last dimension
-            last_dim = key_cache.numel() // (tp_size * num_blocks * num_kv_heads * (head_size // x) * x)
-            
-            # Reshape with calculated last dimension
-            key_cache = key_cache.view(tp_size, num_blocks, num_kv_heads,
-                                    head_size // x, last_dim, x)
-            print(f"Reshaped key_cache shape: {key_cache.shape}")
-
-            value_cache = kv_cache_group[1]
-            value_cache = value_cache.view(tp_size, num_blocks, num_kv_heads,
-                                           head_size, -1)
-            return key_cache, value_cache
-        else:
-            x = 16 // kv_cache.element_size()
+        x = 16 // kv_cache.element_size()
+        if tp_size == 1:
             num_blocks = kv_cache.shape[1]
-
             key_cache = kv_cache[0]
             key_cache = key_cache.view(num_blocks, num_kv_heads,
                                        head_size // x, -1, x)
@@ -87,6 +64,19 @@ class PagedAttention:
             value_cache = value_cache.view(num_blocks, num_kv_heads, head_size,
                                            -1)
             return key_cache, value_cache
+        else:
+            assert tp_size == kv_cache.shape[0]
+            num_blocks = kv_cache.shape[2]
+            kv_cache_group = kv_cache.split(1, 1)
+            key_cache = kv_cache_group[0]             # Add debug prints
+            key_cache = key_cache.view(tp_size, num_blocks, num_kv_heads,
+                                    head_size // x, -1, x)
+
+            value_cache = kv_cache_group[1]
+            value_cache = value_cache.view(tp_size, num_blocks, num_kv_heads,
+                                           head_size, -1)
+            return key_cache, value_cache
+
 
     @staticmethod
     def write_to_paged_cache(
@@ -228,7 +218,6 @@ class PagedAttention:
 
     # modify
     # return output output_exp_sum output_max_sums
-    # is_remote: call the remote pagedattention kernel
     @staticmethod
     def forward_decode_v2(
         query: torch.Tensor,
@@ -242,14 +231,14 @@ class PagedAttention:
         scale: float,
         alibi_slopes: Optional[torch.Tensor],
         kv_scale: float,
-        is_remote: bool = False,
+        tp_size: int = 1,
         tp_rank: int = 0,
         blocksparse_local_blocks: int = 0,
         blocksparse_vert_stride: int = 0,
         blocksparse_block_size: int = 64,
         blocksparse_head_sliding_step: int = 0,
-    ) -> Tuple[torch.tensor, torch.Tensor, torch.Tensor]:
-        if not is_remote:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if tp_size == 1:
             use_sparse = blocksparse_vert_stride > 1
             if blocksparse_vert_stride is not None and use_sparse:
                 # use blocksparse paged attention

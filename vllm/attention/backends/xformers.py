@@ -371,6 +371,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
             Tuple of (output, exp_sums, max_log)
             output shape = [num_tokens, num_heads * head_size]
         """
+        # NOTE: this is the tp size in the master node
         tp_size = query.size(0)
         num_old = query.size(1)
         if remote_metadata := attn_metadata.remote_metadata:
@@ -415,7 +416,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
                 scale=self.scale,
                 alibi_slopes=self.alibi_slopes,
                 kv_scale=kv_scale,
-                is_remote=True,
+                tp_size=tp_size,
             )
             output[:], exp_sums[:], max_log[:] = result
 
@@ -618,7 +619,6 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
                 self.scale,
                 self.alibi_slopes,
                 kv_scale,
-                is_remote=False,
             )
             output[num:], exp_sums[:], max_log[:] = result
         # Reshape the output tensor.
