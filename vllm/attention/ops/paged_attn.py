@@ -60,8 +60,19 @@ class PagedAttention:
             num_blocks = kv_cache.shape[2]
             kv_cache_group = kv_cache.split(1, 1)
             key_cache = kv_cache_group[0]
+             # Add debug prints
+            print(f"Original key_cache shape: {key_cache.shape}")
+            print(f"tp_size: {tp_size}, num_blocks: {num_blocks}, num_kv_heads: {num_kv_heads}")
+            print(f"head_size: {head_size}, x: {x}")
+
+            # Calculate the size of the last dimension
+            last_dim = key_cache.numel() // (tp_size * num_blocks * num_kv_heads * (head_size // x) * x)
+            
+            # Reshape with calculated last dimension
             key_cache = key_cache.view(tp_size, num_blocks, num_kv_heads,
-                                       head_size // x, -1, x)
+                                    head_size // x, last_dim, x)
+            print(f"Reshaped key_cache shape: {key_cache.shape}")
+            
             value_cache = kv_cache_group[1]
             value_cache = value_cache.view(tp_size, num_blocks, num_kv_heads,
                                            head_size, -1)
