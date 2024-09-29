@@ -401,7 +401,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
                 device=output.device,
             )
             key_cache, value_cache = PagedAttention.split_kv_cache(
-                kv_cache, self.num_kv_heads, self.head_size, True)
+                kv_cache, self.num_kv_heads, self.head_size, tp_size)
             # Decoding run
             result = PagedAttention.forward_decode_v2(
                 query=decode_query,
@@ -534,7 +534,7 @@ class XFormersImpl(AttentionImpl[XFormersMetadata]):
 
         if kv_cache is not None:
             key_cache, value_cache = PagedAttention.split_kv_cache(
-                kv_cache, self.num_kv_heads, self.head_size, False)
+                kv_cache, self.num_kv_heads, self.head_size)
 
             # Reshape the input keys and values and store them in the cache.
             # If kv_cache is not provided, the new key and value tensors are

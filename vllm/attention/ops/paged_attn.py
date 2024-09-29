@@ -52,16 +52,15 @@ class PagedAttention:
         kv_cache: torch.Tensor,
         num_kv_heads: int,
         head_size: int,
-        tensor_parallel: Optional[bool],
+        tp_size: int = 1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        if tensor_parallel is not None and tensor_parallel:
+        print(f"Original key_cache shape: {kv_cache.shape}")
+        if tp_size > 1:
             x = 16 // kv_cache.element_size()
             tp_size = kv_cache.shape[0]
             num_blocks = kv_cache.shape[2]
             kv_cache_group = kv_cache.split(1, 1)
-            key_cache = kv_cache_group[0]
-             # Add debug prints
-            print(f"Original key_cache shape: {key_cache.shape}")
+            key_cache = kv_cache_group[0]             # Add debug prints
             print(f"tp_size: {tp_size}, num_blocks: {num_blocks}, num_kv_heads: {num_kv_heads}")
             print(f"head_size: {head_size}, x: {x}")
 
@@ -72,7 +71,7 @@ class PagedAttention:
             key_cache = key_cache.view(tp_size, num_blocks, num_kv_heads,
                                     head_size // x, last_dim, x)
             print(f"Reshaped key_cache shape: {key_cache.shape}")
-            
+
             value_cache = kv_cache_group[1]
             value_cache = value_cache.view(tp_size, num_blocks, num_kv_heads,
                                            head_size, -1)
