@@ -1260,7 +1260,7 @@ def get_world_size():
 
 def get_tensor_model_parallel_rank():
     global_rank = get_world_group().rank_in_group
-    if global_rank < get_tp_group().world_size:
+    if global_rank < get_tensor_model_parallel_world_size():
         """Return my rank for the tensor model parallel group."""
         return get_tp_group().rank_in_group
     else:
@@ -1270,14 +1270,10 @@ def get_tensor_model_parallel_rank():
 def get_sequence_parallel_rank():
     """Return my rank for the tensor model parallel group."""
     global_rank = get_world_group().rank_in_group
-    global_size= get_world_group().world_size
-    if global_rank >= get_tp_group().world_size:
-        #head node     sub node
-        #tp_group      tp_group_remain
-        #           sp_group
-        tp_group_remain_size=get_tp_group().world_size
-        tp_group_size=global_size-tp_group_remain_size
-        return global_rank-tp_group_size
+    tp_size = get_tensor_model_parallel_world_size()
+    # TODO: 因为暂时不采用tp，所以可以按照下面的逻辑判断
+    if global_rank >= tp_size:
+        return global_rank - tp_size
     else:
         return -1
 
