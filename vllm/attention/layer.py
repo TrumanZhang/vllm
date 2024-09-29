@@ -34,6 +34,7 @@ class Attention(nn.Module):
         cache_config: Optional[CacheConfig] = None,
         quant_config: Optional[QuantizationConfig] = None,
         blocksparse_params: Optional[Dict[str, Any]] = None,
+        is_sp_worker: bool = False,
     ) -> None:
         super().__init__()
         if cache_config is not None:
@@ -77,8 +78,10 @@ class Attention(nn.Module):
         attn_backend = get_attn_backend(num_heads, head_size, num_kv_heads,
                                         sliding_window, dtype, kv_cache_dtype,
                                         block_size, blocksparse_params
-                                        is not None)
+                                        is not None, is_sp_worker)
         impl_cls = attn_backend.get_impl_cls()
+        assert not is_sp_worker or attn_backend.get_name() == "xformersRemote", \
+        f"When is_sp_worker is True, attn_backend should be 'xformersRemote', but got {attn_backend.get_name()}"
         self.impl = impl_cls(num_heads, head_size, scale, num_kv_heads,
                              alibi_slopes, sliding_window, kv_cache_dtype,
                              blocksparse_params)

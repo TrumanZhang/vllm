@@ -212,7 +212,6 @@ class GPUModelRunnerBase(ModelRunnerBase[TModelInputForGPU]):
             is_sp_worker=self.is_sp_worker,
         ) if num_attn_heads else None
 
-        logger.info(f"attn_backend name is {self.attn_backend.get_name()}")
         # Multi-modal data support
         self.multi_modal_input_mapper = MULTIMODAL_REGISTRY \
             .create_input_mapper(self.model_config)
