@@ -1271,7 +1271,7 @@ def get_tensor_model_parallel_rank():
 def get_sequence_parallel_rank():
     """Return my rank for the tensor model parallel group."""
     #NOTE. Its the actuall the global rank in current version
-    return get_sp_group().rank_in_group
+    return get_sp_group(0).rank_in_group
 
 
 def destroy_model_parallel():
