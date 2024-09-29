@@ -83,7 +83,8 @@ class OnlyAttention(nn.Module):
                               self.scaling,
                               num_kv_heads=self.num_kv_heads,
                               cache_config=cache_config,
-                              quant_config=quant_config)
+                              quant_config=quant_config,
+                              is_sp_worker=True,)
 
         self.sp_rank = get_sequence_parallel_rank()
         self.broastcastlayer=SequenceParallelLinearForBroastcast()
