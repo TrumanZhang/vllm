@@ -402,7 +402,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
                 device=output.device,
             )
             key_cache, value_cache = PagedAttention.split_kv_cache(
-                kv_cache, self.num_kv_heads, self.head_size, tp_size)
+                kv_cache, self.num_kv_heads, self.head_size, is_remote=True)
             # Decoding run
             result = PagedAttention.forward_decode_v2(
                 query=decode_query,
@@ -416,7 +416,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
                 scale=self.scale,
                 alibi_slopes=self.alibi_slopes,
                 kv_scale=kv_scale,
-                tp_size=tp_size,
+                is_remote=True,
             )
             output[:], exp_sums[:], max_log[:] = result
 

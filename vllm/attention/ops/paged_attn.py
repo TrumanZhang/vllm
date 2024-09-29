@@ -52,10 +52,10 @@ class PagedAttention:
         kv_cache: torch.Tensor,
         num_kv_heads: int,
         head_size: int,
-        tp_size: int = 1,
+        is_remote: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = 16 // kv_cache.element_size()
-        if tp_size == 1:
+        if is_remote == False:
             num_blocks = kv_cache.shape[1]
             key_cache = kv_cache[0]
             key_cache = key_cache.view(num_blocks, num_kv_heads,
@@ -65,7 +65,7 @@ class PagedAttention:
                                            -1)
             return key_cache, value_cache
         else:
-            assert tp_size == kv_cache.shape[0]
+            tp_size = kv_cache.shape[0]
             num_blocks = kv_cache.shape[2]
             kv_cache_group = kv_cache.split(1, 1)
             key_cache = kv_cache_group[0]             # Add debug prints
@@ -231,14 +231,14 @@ class PagedAttention:
         scale: float,
         alibi_slopes: Optional[torch.Tensor],
         kv_scale: float,
-        tp_size: int = 1,
+        is_remote: bool = False,
         tp_rank: int = 0,
         blocksparse_local_blocks: int = 0,
         blocksparse_vert_stride: int = 0,
         blocksparse_block_size: int = 64,
         blocksparse_head_sliding_step: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        if tp_size == 1:
+        if is_remote == False:
             use_sparse = blocksparse_vert_stride > 1
             if blocksparse_vert_stride is not None and use_sparse:
                 # use blocksparse paged attention
