@@ -29,7 +29,7 @@ from transformers import LlamaConfig
 
 from vllm.attention import Attention, AttentionMetadata
 from vllm.config import CacheConfig, LoRAConfig
-from vllm.distributed import (get_sequence_parallel_rank,
+from vllm.distributed import (get_tensor_model_parallel_rank,
                               get_tensor_model_parallel_world_size,
                               get_world_size)
 
@@ -55,7 +55,7 @@ class OnlyAttention(nn.Module):
     ) -> None:
         super().__init__()
         self.hidden_size = hidden_size
-        # For only attention, tp_size should be the tp_size of its complementary group, 
+        # TODO: For only attention, tp_size should be the tp_size of its complementary group, 
         # temporarily modified like this
         self.tp_size = get_world_size() - get_tensor_model_parallel_world_size()
         tp_size = self.tp_size
@@ -85,8 +85,9 @@ class OnlyAttention(nn.Module):
                               cache_config=cache_config,
                               quant_config=quant_config,
                               is_sp_worker=True,)
-
-        self.sp_rank = get_sequence_parallel_rank()
+        # NOTE. In current version, the sp_rank is indeed the local rank in the SP nodes's group, i.e.,
+        # the local tp_rank. 
+        self.sp_rank = get_tensor_model_parallel_rank()
         self.broastcastlayer=SequenceParallelLinearForBroastcast()
         self.gatherlayer = SequenceParallelLinearForGather()
 

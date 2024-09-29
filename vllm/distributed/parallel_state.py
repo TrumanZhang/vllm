@@ -1259,23 +1259,19 @@ def get_world_size():
     return get_world_group().world_size
 
 def get_tensor_model_parallel_rank():
-    global_rank = get_world_group().rank_in_group
-    if global_rank < get_tensor_model_parallel_world_size():
-        """Return my rank for the tensor model parallel group."""
-        return get_tp_group().rank_in_group
-    else:
-        return -1
+    # global_rank = get_world_group().rank_in_group
+    # if global_rank < get_tensor_model_parallel_world_size():
+    #     """Return my rank for the tensor model parallel group."""
+    #     return get_tp_group().rank_in_group
+    # else:
+    #     return -1
+    return get_tp_group().rank_in_group
 
 
 def get_sequence_parallel_rank():
     """Return my rank for the tensor model parallel group."""
-    global_rank = get_world_group().rank_in_group
-    tp_size = get_tensor_model_parallel_world_size()
-    # TODO: 因为暂时不采用tp，所以可以按照下面的逻辑判断
-    if global_rank >= tp_size:
-        return global_rank - tp_size
-    else:
-        return -1
+    #NOTE. Its the actuall the global rank in current version
+    return get_sp_group().rank_in_group
 
 
 def destroy_model_parallel():
