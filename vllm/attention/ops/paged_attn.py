@@ -52,10 +52,10 @@ class PagedAttention:
         kv_cache: torch.Tensor,
         num_kv_heads: int,
         head_size: int,
-        is_remote: bool = False,
+        tp_size: int = 1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = 16 // kv_cache.element_size()
-        if is_remote == False:
+        if tp_size == 1:
             num_blocks = kv_cache.shape[1]
             key_cache = kv_cache[0]
             key_cache = key_cache.view(num_blocks, num_kv_heads,
@@ -65,7 +65,7 @@ class PagedAttention:
                                            -1)
             return key_cache, value_cache
         else:
-            tp_size = kv_cache.shape[0]
+            assert tp_size == kv_cache.shape[0]
             num_blocks = kv_cache.shape[2]
             kv_cache_group = kv_cache.split(1, 1)
             key_cache = kv_cache_group[0]             # Add debug prints

@@ -402,7 +402,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
                 device=output.device,
             )
             key_cache, value_cache = PagedAttention.split_kv_cache(
-                kv_cache, self.num_kv_heads, self.head_size, is_remote=True)
+                kv_cache, self.num_kv_heads, self.head_size, tp_size=tp_size)
             # Decoding run
             result = PagedAttention.forward_decode_v2(
                 query=decode_query,
