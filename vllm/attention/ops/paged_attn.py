@@ -312,9 +312,13 @@ class PagedAttention:
 
             return output, out_exp_sums, out_max_logits
         else:
-            # [tp_size, num_blocks, num_kv_heads, head_size, -1]
-            block_size = value_cache.shape[4]
             tp_size, num_seqs, num_heads, head_size = query.shape
+            if tp_size == 1:
+                # [num_blocks, num_kv_heads, head_size, -1]
+                block_size = value_cache.shape[3]
+            else:
+                # [tp_size, num_blocks, num_kv_heads, head_size, -1]
+                block_size = value_cache.shape[4]
             max_num_partitions = ((max_seq_len + _PARTITION_SIZE - 1) //
                                   _PARTITION_SIZE)
             # NOTE(woosuk): We use a simple heuristic to decide whether to use
