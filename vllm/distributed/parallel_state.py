@@ -335,6 +335,7 @@ class GroupCoordinator:
                                                input_size[dim], ) +
                                               input_size[dim + 1:])
         return output_tensor
+    
     def all_gather_extension(self, input_: torch.Tensor, dim: int = -1) -> torch.Tensor:
         world_size = self.world_size
         # Bypass the function if we are using only 1 GPU.
@@ -351,6 +352,9 @@ class GroupCoordinator:
                                     dtype=input_.dtype,
                                     device=input_.device)
         # All-gather.
+        logger.info(f"All processes are goint to all_gather: rank={self.rank}")
+        self.barrier()
+
         torch.distributed.all_gather_into_tensor(output_tensor,
                                                  input_,
                                                  group=self.device_group)
@@ -360,6 +364,8 @@ class GroupCoordinator:
         #                                       (world_size *
         #                                        input_size[dim], ) +
         #                                       input_size[dim + 1:])
+        self.barrier()
+        logger.info(f"All processes finishes all_gather: rank={self.rank}")
         return output_tensor    
 
     def gather(self,
