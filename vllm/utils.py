@@ -651,7 +651,8 @@ def filter_tensor(
             logger.error(f"GPU memory allocated: {torch.cuda.memory_allocated() / 1e9:.2f} GB")
             logger.error(f"GPU memory reserved: {torch.cuda.memory_reserved() / 1e9:.2f} GB")
         raise  # Re-raise the exception after logging
-
+    
+    logger.info(f"reassignmen begins!!!, tp_size=({tp_size})")
     for tp_rank in range(tp_size):
         index = 0
         old_idx = -1
@@ -662,7 +663,7 @@ def filter_tensor(
                 result_max_logits[tp_rank][index] = out_max_logits[tp_rank][idx]
                 index += 1
                 old_idx = idx
-    
+    logger.info(f"reassignmen ends!!!")
     logger.info(f"Filter tensor completed. Result shapes: output={result.shape}, exp_sums={result_exp_sums.shape}, max_logits={result_max_logits.shape}")
     return result, result_exp_sums, result_max_logits
 
