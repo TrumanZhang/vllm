@@ -1443,12 +1443,12 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         if self.is_sp_worker:
             if decode_meta is not None and decode_meta.num_long_decode_tokens>0:
                 logger.info("$$$$$$$$$$$$$$$$$sp_rank=%d enter execute_model",get_sequence_parallel_rank())
-            hidden_states=model_executable(
-                kv_caches=kv_caches,
-                attn_metadata=model_input.attn_metadata)
+                model_executable(
+                    kv_caches=kv_caches,
+                    attn_metadata=model_input.attn_metadata)
+            else:
+                pass
         else:
-            if decode_meta is not None and decode_meta.num_long_decode_tokens>0:
-                logger.info("$$$$$$$$$$$$$$$$$tp worker enter execute_model",)
             hidden_states = model_executable(
                 input_ids=model_input.input_tokens,
                 positions=model_input.input_positions,
@@ -1460,19 +1460,22 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
             hidden_states_reshape = torch.empty_like(hidden_states,
                                                  dtype=hidden_states.dtype,
                                                  device=hidden_states.device)
-        indexes = model_input.output_reshape_index
-        if indexes is not None and self.model_config.enable_long_sequence:
-            for i in range(len(indexes)):
-                hidden_states_reshape[indexes[i]] = hidden_states[i]
-        else:
-            hidden_states_reshape = hidden_states
-            #logger.info("executing model end,reshape result end")
-        # Compute the logits.
-        logits = self.model.compute_logits(hidden_states_reshape,
-                                           model_input.sampling_metadata)
+            indexes = model_input.output_reshape_index
+            logger.info(f"Reshaping the hidden_states, size: {hidden_states.size()}, indexes: {indexes}")
+            if indexes is not None and self.model_config.enable_long_sequence:
+                for i in range(len(indexes)):
+                    hidden_states_reshape[indexes[i]] = hidden_states[i]
+            else:
+                hidden_states_reshape = hidden_states
+                #logger.info("executing model end,reshape result end")
+            # Compute the logits.
+            logger.info(f"computing the logits")
+            logits = self.model.compute_logits(hidden_states_reshape,
+                                            model_input.sampling_metadata)       
 
         # Only perform sampling in the driver worker.
         if not self.is_driver_worker:
+            logger.info(f"non-driver nodes finshed")
             return []
 
         # Sample the next token.
@@ -1491,7 +1494,8 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                 hidden_states = hidden_states[:len(indices)]
 
             output.hidden_states = hidden_states
-
+        
+        logger.info(f"driver nodes finshed, output size: {output.size()}")
         return [output]
 
 
