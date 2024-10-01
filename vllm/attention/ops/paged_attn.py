@@ -109,7 +109,8 @@ class PagedAttention:
         head_size = tmp_out.size(3)
         size = (num_seqs, num_heads, head_size)
         output = torch.empty(size, dtype=tmp_out.dtype, device=tmp_out.device)
-        ops.sequence_block_reducer(output, exp_sum, max_logits, tmp_out)
+        # TODO: realize reducer in the future.
+        # ops.sequence_block_reducer(output, exp_sum, max_logits, tmp_out)
         return output
 
     @staticmethod
