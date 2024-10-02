@@ -294,14 +294,11 @@ class LlamaDecoderLayer(nn.Module):
             kv_cache=kv_cache,
             attn_metadata=attn_metadata,
         )
-        logger.info(f"LLAMA self attention finished!!!")
         # Fully Connected
         hidden_states, residual = self.post_attention_layernorm(
             hidden_states, residual)
-        logger.info(f"LLAMA layernorm finished!!!")
 
         hidden_states = self.mlp(hidden_states)
-        logger.info(f"LLAMA mlp finished!!!")
 
         return hidden_states, residual
 
@@ -360,7 +357,6 @@ class LlamaModel(nn.Module):
                 attn_metadata,
                 residual,
             )
-            logger.info(f"LLAMA layer {i} finished!!!")
 
         hidden_states, _ = self.norm(hidden_states, residual)
         return hidden_states
