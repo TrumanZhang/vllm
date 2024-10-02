@@ -1495,7 +1495,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
 
             output.hidden_states = hidden_states
         
-        logger.info(f"driver nodes finshed, output size: {output.size()}")
+        logger.info(f"driver nodes finshed.")
         return [output]
 
 
