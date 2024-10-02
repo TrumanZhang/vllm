@@ -1446,6 +1446,7 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                 model_executable(
                     kv_caches=kv_caches,
                     attn_metadata=model_input.attn_metadata)
+                logger.info("$$$$$$$$$$$$$$$$$sp_rank=%d finishes execute_model",get_sequence_parallel_rank())
             else:
                 pass
         else:
@@ -1469,9 +1470,11 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                 hidden_states_reshape = hidden_states
                 #logger.info("executing model end,reshape result end")
             # Compute the logits.
-            logger.info(f"computing the logits")
+            logger.info(f"computing the logits begin")
             logits = self.model.compute_logits(hidden_states_reshape,
-                                            model_input.sampling_metadata)       
+                                            model_input.sampling_metadata)
+            logger.info(f"computing the logits end")
+       
 
         # Only perform sampling in the driver worker.
         if not self.is_driver_worker:
@@ -1479,10 +1482,13 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
             return []
 
         # Sample the next token.
+        logger.info(f"sample the logits begin")
         output: SamplerOutput = self.model.sample(
             logits=logits,
             sampling_metadata=model_input.sampling_metadata,
         )
+        logger.info(f"sample the logits end")
+
 
         if self.return_hidden_states:
             # we only need to pass hidden states of most recent token
