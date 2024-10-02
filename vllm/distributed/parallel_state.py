@@ -379,6 +379,7 @@ class GroupCoordinator:
         """
         world_size = self.world_size
         # Bypass the function if we are using only 1 GPU.
+        logger.info(f"begin to gather, world size: {world_size}, dst: {dst}, dst in group: {self.ranks[dst]}")
         if world_size == 1:
             return input_
         assert -input_.dim() <= dim < input_.dim(), (
