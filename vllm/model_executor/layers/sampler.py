@@ -60,13 +60,16 @@ class Sampler(nn.Module):
         assert logits is not None
         _, vocab_size = logits.shape
 
+        print("1111111")
         logits = _apply_min_tokens_penalty(logits, sampling_metadata)
 
+        print("2222222")
         # Prepare sampling tensors with pinned memory to avoid blocking.
         (sampling_tensors, do_penalties, do_top_p_top_k,
          do_min_p) = SamplingTensors.from_sampling_metadata(
              sampling_metadata, vocab_size, logits.device, logits.dtype)
 
+        print("3333333")
         # Apply presence and frequency penalties.
         if do_penalties:
             logits = _apply_penalties(logits, sampling_tensors.prompt_tokens,
@@ -92,6 +95,7 @@ class Sampler(nn.Module):
         # Compute the log probabilities.
         logprobs = torch.log_softmax(logits, dim=-1, dtype=torch.float)
 
+        print("4444444")
         # Sample the next tokens.
         sample_results, maybe_sampled_tokens_tensor = _sample(
             probs,
@@ -108,6 +112,7 @@ class Sampler(nn.Module):
         else:
             on_device_tensors = None
 
+        print("5555555")
         # Get the logprobs query results.
         prompt_logprobs, sample_logprobs = _get_logprobs(
             logprobs, sampling_metadata, sample_results)

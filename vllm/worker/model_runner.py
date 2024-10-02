@@ -1481,29 +1481,27 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
             logger.info(f"non-driver nodes finshed")
             return []
 
-        # # Sample the next token.
-        # logger.info(f"sample the logits begin")
-        # output: SamplerOutput = self.model.sample(
-        #     logits=logits,
-        #     sampling_metadata=model_input.sampling_metadata,
-        # )
-        # logger.info(f"sample the logits end")
+        # Sample the next token.
+        logger.info(f"sample the logits begin")
+        output: SamplerOutput = self.model.sample(
+            logits=logits,
+            sampling_metadata=model_input.sampling_metadata,
+        )
+        logger.info(f"sample the logits end")
 
-        # if self.return_hidden_states:
-        #     # we only need to pass hidden states of most recent token
-        #     assert model_input.sampling_metadata is not None
-        #     indices = model_input.sampling_metadata.selected_token_indices
-        #     if model_input.is_prompt:
-        #         hidden_states = hidden_states.index_select(0, indices)
-        #     elif decode_meta.use_cuda_graph:
-        #         hidden_states = hidden_states[:len(indices)]
+        if self.return_hidden_states:
+            # we only need to pass hidden states of most recent token
+            assert model_input.sampling_metadata is not None
+            indices = model_input.sampling_metadata.selected_token_indices
+            if model_input.is_prompt:
+                hidden_states = hidden_states.index_select(0, indices)
+            elif decode_meta.use_cuda_graph:
+                hidden_states = hidden_states[:len(indices)]
 
-        #     output.hidden_states = hidden_states
+            output.hidden_states = hidden_states
         
-        # logger.info(f"driver nodes finshed.")
-        # return [output]
-        logger.info(f"driver nodes finshed")
-        return []
+        logger.info(f"driver nodes finshed.")
+        return [output]
 
 
 class CUDAGraphRunner:
