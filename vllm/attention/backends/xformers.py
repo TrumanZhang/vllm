@@ -404,6 +404,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
             key_cache, value_cache = PagedAttention.split_kv_cache(
                 kv_cache, self.num_kv_heads, self.head_size, tp_size=tp_size)
             # Decoding run
+            logger.info(f"start pagedattetion in XFormersRemoteImpl")
             result = PagedAttention.forward_decode_v2(
                 query=decode_query,
                 key_cache=key_cache,
@@ -419,7 +420,7 @@ class XFormersRemoteImpl(AttentionImpl[XFormersMetadata]):
                 is_remote=True,
             )
             output[:], exp_sums[:], max_log[:] = result
-
+            logger.info(f"end pagedattetion in XFormersRemoteImpl")
             # Reshape the output tensor.
             tmp = output.view(tp_size, -1, self.num_heads * self.head_size)
             return filter_tensor(tmp, exp_sums, max_log, q_dist, num_old, tp_size)
